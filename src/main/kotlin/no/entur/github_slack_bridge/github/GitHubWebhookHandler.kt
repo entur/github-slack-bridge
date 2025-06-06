@@ -12,8 +12,8 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
     private val logger = LoggerFactory.getLogger(GitHubWebhookHandler::class.java)
     private val json = Json { ignoreUnknownKeys = true }
 
-    open suspend fun handleWebhook(eventType: String?, payload: String, signature: String? = null) {
-        logger.info("Received GitHub webhook event: $eventType")
+    open suspend fun handleWebhook(eventType: String?, payload: String, signature: String? = null, channel: String? = null) {
+        logger.info("Received GitHub webhook event: $eventType for channel: $channel")
 
         if (signature == null) {
             logger.warn("No signature provided, rejecting webhook")
@@ -28,8 +28,8 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
         logger.info("Webhook signature validation passed")
 
         when (eventType) {
-            "push" -> handlePushEvent(payload)
-            "pull_request" -> handlePullRequestEvent(payload)
+            "push" -> handlePushEvent(payload, channel)
+            "pull_request" -> handlePullRequestEvent(payload, channel)
             else -> logger.info("Ignoring unsupported event type: $eventType")
         }
     }
@@ -60,11 +60,16 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
         }
     }
 
-    private suspend fun handlePushEvent(payload: String) {
+    private suspend fun handlePushEvent(payload: String, channel: String?) {
         try {
             val pushEvent = json.decodeFromString<GitHubPushEvent>(payload)
             val branchName = pushEvent.ref.removePrefix("refs/heads/")
             val repoName = pushEvent.repository.fullName
+
+            if (branchName != "main" && branchName != "master") {
+                logger.info("Skipping push event for branch: $branchName (not main or master)")
+                return
+            }
 
             if (pushEvent.commits.isEmpty()) {
                 logger.info("Skipping push event with no commits")
@@ -78,7 +83,8 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
             val message = SlackMessage(
                 text = "*${authorName}* pushed ${commitCount} commit${pluralSuffix} to " +
-                        "<${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}>\n$formattedCommits"
+                        "<${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}>\n$formattedCommits",
+                channel = channel
             )
 
             slackClient.sendMessage(message)
@@ -96,7 +102,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
         }
     }
 
-    private suspend fun handlePullRequestEvent(payload: String) {
+    private suspend fun handlePullRequestEvent(payload: String, channel: String?) {
         try {
             val prEvent = json.decodeFromString<GitHubPullRequestEvent>(payload)
             val pullRequest = prEvent.pullRequest
@@ -115,7 +121,8 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
             val message = SlackMessage(
                 text = "$emoji Pull Request ${actionText}: <${pullRequest.htmlUrl}|#${pullRequest.number} ${pullRequest.title}> " +
-                        "by *${pullRequest.user.login}* in <${repository.htmlUrl}|${repository.fullName}>"
+                        "by *${pullRequest.user.login}* in <${repository.htmlUrl}|${repository.fullName}>",
+                channel = channel
             )
 
             slackClient.sendMessage(message)

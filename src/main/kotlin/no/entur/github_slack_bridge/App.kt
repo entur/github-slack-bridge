@@ -45,13 +45,14 @@ fun Application.configureServer(githubWebhookHandler: GitHubWebhookHandler) {
             call.respondText("""{"status":"UP"}""", contentType = ContentType.Application.Json)
         }
 
-        post("/webhook/github") {
+        post("/webhook/github/{channel}") {
+            val channel = call.parameters["channel"]
             val payload = call.receiveText() // Updated from receive<String>() to receiveText()
             val eventType = call.request.header("X-GitHub-Event")
             val signature = call.request.header("X-Hub-Signature-256")
 
             try {
-                githubWebhookHandler.handleWebhook(eventType, payload, signature)
+                githubWebhookHandler.handleWebhook(eventType, payload, signature, channel)
                 call.respond(HttpStatusCode.OK, "Webhook processed successfully")
             } catch (e: Exception) {
                 call.application.log.error("Error processing webhook", e)

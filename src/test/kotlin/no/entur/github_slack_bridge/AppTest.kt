@@ -37,7 +37,7 @@ class AppTest {
             configureServer(mockWebhookHandler)
         }
 
-        client.post("/webhook/github") {
+        client.post("/webhook/github/general") {
             header("X-GitHub-Event", "push")
             contentType(ContentType.Application.Json)
             setBody("""{"ref":"refs/heads/main","commits":[]}""")
@@ -45,6 +45,7 @@ class AppTest {
             assertEquals(HttpStatusCode.OK, status)
             assertEquals("Webhook processed successfully", bodyAsText())
             assertTrue(mockWebhookHandler.handledEvents.contains("push"))
+            assertEquals("general", mockWebhookHandler.lastChannel)
         }
     }
 
@@ -57,7 +58,7 @@ class AppTest {
             configureServer(errorWebhookHandler)
         }
 
-        client.post("/webhook/github") {
+        client.post("/webhook/github/random-channel") {
             header("X-GitHub-Event", "push")
             contentType(ContentType.Application.Json)
             setBody("""{"ref":"refs/heads/main"}""")
@@ -79,14 +80,16 @@ class AppTest {
 
     private class MockGitHubWebhookHandler(slackClient: SlackClient) : GitHubWebhookHandler(slackClient, "dummy-secret") {
         val handledEvents = mutableListOf<String>()
+        var lastChannel: String? = null
 
-        override suspend fun handleWebhook(eventType: String?, payload: String, signature: String?) {
+        override suspend fun handleWebhook(eventType: String?, payload: String, signature: String?, channel: String?) {
             eventType?.let { handledEvents.add(eventType) }
+            lastChannel = channel
         }
     }
 
     private class ErrorGitHubWebhookHandler : GitHubWebhookHandler(MockSlackClient(), "dummy-secret") {
-        override suspend fun handleWebhook(eventType: String?, payload: String, signature: String?) {
+        override suspend fun handleWebhook(eventType: String?, payload: String, signature: String?, channel: String?) {
             throw RuntimeException("Expected test error, please ignore this")
         }
     }
