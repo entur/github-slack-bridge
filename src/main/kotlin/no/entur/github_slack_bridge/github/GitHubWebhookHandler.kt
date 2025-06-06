@@ -97,7 +97,6 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                 text = "*${authorName}* pushed ${commitCount} commit${pluralSuffix} to " +
                         "<${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}>\n$formattedCommits",
                 channel = channel,
-                username = "bottie",
             )
 
             slackClient.sendMessage(message)

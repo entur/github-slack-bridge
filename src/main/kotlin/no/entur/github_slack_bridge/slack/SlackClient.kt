@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory
 @Serializable
 data class SlackMessage(
     val text: String,
-    val username: String? = null,
+    val username: String? = "bottie",
     val icon_emoji: String? = ":rocket:",
     val icon_url: String? = null,
     val channel: String? = null
