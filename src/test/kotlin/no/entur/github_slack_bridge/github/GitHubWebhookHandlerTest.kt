@@ -70,7 +70,7 @@ class GitHubWebhookHandlerTest {
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
 
-        assertTrue(message.text.contains("*Test User* pushed 1 commit to"))
+        assertTrue(message.text.contains("*testuser* pushed 1 commit to"))
         assertTrue(message.text.contains("user/test-repo:main"))
         assertTrue(message.text.contains("Fix bug in authentication"))
 
@@ -296,7 +296,7 @@ class GitHubWebhookHandlerTest {
         // Verify that messages were sent, since this is a master branch
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
-        assertTrue(message.text.contains("*Test User* pushed 1 commit to"))
+        assertTrue(message.text.contains("*testuser* pushed 1 commit to"))
         assertTrue(message.text.contains("user/test-repo:master"))
         assertTrue(message.text.contains("Fix bug in production"))
     }
