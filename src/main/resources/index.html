@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub Slack Bridge</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+        .endpoint {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-left: 3px solid #2c3e50;
+        }
+        .setup-guide {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f0f7fb;
+            border-radius: 5px;
+            border: 1px solid #d0e3ef;
+        }
+        .setup-guide h2 {
+            margin-top: 0;
+            color: #2980b9;
+        }
+        .setup-guide ol {
+            padding-left: 20px;
+        }
+        .setup-guide li {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GitHub Slack Bridge</h1>
+        <p>This service forwards GitHub webhook events to Slack channels.</p>
+
+        <div class="endpoint">
+            <h3>Webhook</h3>
+            <p><code>POST /webhook/{channel}</code></p>
+            <p>Configure your GitHub repository webhooks to send events to this endpoint. The <code>{channel}</code> parameter in the URL specifies which Slack channel should receive the notifications.</p>
+        </div>
+
+        <h2>Service Configuration:</h2>
+        <p>This service requires the following environment variables:</p>
+        <ul>
+            <li><code>SLACK_WEBHOOK_URL</code> - <strong>Required</strong>. The Slack incoming webhook URL that messages will be sent to.</li>
+            <li><code>GITHUB_WEBHOOK_SECRET</code> - <strong>Required</strong>. The secret used to validate GitHub webhook payloads.</li>
+        </ul>
+
+        <h2>Supported GitHub Events:</h2>
+        <ul>
+            <li>Push events (to main/master branches)</li>
+            <li>Pull request events (opened, closed, reopened)</li>
+            <li>Workflow run events (failed builds and fixed builds)</li>
+        </ul>
+
+        <div class="setup-guide">
+            <h2>GitHub Webhook Setup Guide</h2>
+            <p>Follow these steps to configure a webhook in your GitHub repository:</p>
+
+            <ol>
+                <li>Go to your GitHub repository and click on <strong>Settings</strong>.</li>
+                <li>Select <strong>Webhooks</strong> from the left sidebar.</li>
+                <li>Click the <strong>Add webhook</strong> button.</li>
+                <li>In the <strong>Payload URL</strong> field, enter: <code>https://your-deployment-url/webhook/your-slack-channel</code>
+                    <ul>
+                        <li>Replace <code>your-deployment-url</code> with the base URL where this service is deployed.</li>
+                        <li>Replace <code>your-slack-channel</code> with the name of the Slack channel you want to send notifications to.</li>
+                    </ul>
+                </li>
+                <li>Set the <strong>Content type</strong> to <code>application/json</code>.</li>
+                <li>In the <strong>Secret</strong> field, enter your webhook secret. <strong>This field is mandatory</strong> and must match the <code>GITHUB_WEBHOOK_SECRET</code> environment variable set in the service.</li>
+                <li>Under <strong>Which events would you like to trigger this webhook?</strong>:
+                    <ul>
+                        <li>Select <strong>Let me select individual events</strong>.</li>
+                        <li>Check the following events: <code>Push</code>, <code>Pull requests</code>, and <code>Workflow runs</code>.</li>
+                    </ul>
+                </li>
+                <li>Make sure <strong>Active</strong> is checked.</li>
+                <li>Click <strong>Add webhook</strong> to save your configuration.</li>
+            </ol>
+
+            <p>After setting up the webhook, GitHub will send a ping event to verify the connection. You should see this event in your service logs.</p>
+        </div>
+    </div>
+</body>
+</html>

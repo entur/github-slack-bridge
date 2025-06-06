@@ -37,6 +37,12 @@ fun Application.configureServer(githubWebhookHandler: GitHubWebhookHandler) {
     }
 
     routing {
+        get("/") {
+            val indexHtml = this::class.java.classLoader.getResource("index.html")?.readText()
+                ?: "<html><body><h1>GitHub Slack Bridge</h1><p>Error loading index page.</p></body></html>"
+            call.respondText(indexHtml, ContentType.Text.Html)
+        }
+
         get("/actuator/health/liveness") {
             call.respondText("""{"status":"UP"}""", contentType = ContentType.Application.Json)
         }
@@ -45,9 +51,9 @@ fun Application.configureServer(githubWebhookHandler: GitHubWebhookHandler) {
             call.respondText("""{"status":"UP"}""", contentType = ContentType.Application.Json)
         }
 
-        post("/webhook/github/{channel}") {
+        post("/webhook/{channel}") {
             val channel = call.parameters["channel"]
-            val payload = call.receiveText() // Updated from receive<String>() to receiveText()
+            val payload = call.receiveText()
             val eventType = call.request.header("X-GitHub-Event")
             val signature = call.request.header("X-Hub-Signature-256")
 

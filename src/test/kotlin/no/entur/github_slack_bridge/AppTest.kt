@@ -37,7 +37,7 @@ class AppTest {
             configureServer(mockWebhookHandler)
         }
 
-        client.post("/webhook/github/general") {
+        client.post("/webhook/general") {
             header("X-GitHub-Event", "push")
             contentType(ContentType.Application.Json)
             setBody("""{"ref":"refs/heads/main","commits":[]}""")
@@ -58,7 +58,7 @@ class AppTest {
             configureServer(errorWebhookHandler)
         }
 
-        client.post("/webhook/github/random-channel") {
+        client.post("/webhook/random-channel") {
             header("X-GitHub-Event", "push")
             contentType(ContentType.Application.Json)
             setBody("""{"ref":"refs/heads/main"}""")
