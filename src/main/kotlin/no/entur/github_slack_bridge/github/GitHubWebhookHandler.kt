@@ -82,7 +82,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             }
 
             val commitCount = pushEvent.commits.size
-            val authorName = pushEvent.commits.firstOrNull()?.author?.name ?: pushEvent.sender.login
+            val authorName = pushEvent.commits.firstOrNull()?.author?.username ?: pushEvent.sender.login
             val formattedCommits = formatCommitMessages(pushEvent.commits)
             val pluralSuffix = if (commitCount > 1) "s" else ""
 
