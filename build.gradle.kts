@@ -32,14 +32,13 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 
-    // Enhanced test logging for console output - show only failed tests
     testLogging {
         events("failed")
         showExceptions = true
         showCauses = true
-        showStackTraces = false // Reduce stack trace output
-        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.SHORT // Use SHORT format instead of FULL
-        showStandardStreams = false // Only show standard streams for failures
+        showStackTraces = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStandardStreams = false
     }
 }
 
