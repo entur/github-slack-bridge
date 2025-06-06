@@ -35,6 +35,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
         when (eventType) {
             "push" -> handlePushEvent(payload, channel)
             "pull_request" -> handlePullRequestEvent(payload, channel)
+            "workflow_run" -> handleWorkflowRunEvent(payload, channel)
             else -> logger.info("Ignoring unsupported event type: $eventType")
         }
     }
@@ -154,6 +155,39 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             isMerged -> "merged"
             action == "closed" -> "closed"
             else -> action
+        }
+    }
+
+    private suspend fun handleWorkflowRunEvent(payload: String, channel: String?) {
+        try {
+            val workflowRunEvent = json.decodeFromString<GitHubWorkflowRunEvent>(payload)
+            val workflowRun = workflowRunEvent.workflowRun
+            val repository = workflowRunEvent.repository
+
+            if (workflowRun.status != "completed" || workflowRun.conclusion != "failure") {
+                logger.info("Ignoring workflow run that is not a failure: status=${workflowRun.status}, conclusion=${workflowRun.conclusion}")
+                return
+            }
+
+            val actorName = workflowRun.actor.login
+            val branchName = workflowRun.headBranch
+            val shortSha = workflowRun.headSha.take(7)
+
+            val message = SlackMessage(
+                text = ":x: Build failed: *${workflowRun.name}* workflow run " +
+                        "(<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) " +
+                        "in <${repository.htmlUrl}|${repository.fullName}> " +
+                        "on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>) " +
+                        "by *${actorName}*",
+                channel = channel,
+                username = "bottie",
+            )
+
+            slackClient.sendMessage(message)
+            logger.info("Sent notification for failed build: ${workflowRun.name} #${workflowRun.runNumber}")
+        } catch (e: Exception) {
+            logger.error("Error processing workflow_run event", e)
+            throw e
         }
     }
 }

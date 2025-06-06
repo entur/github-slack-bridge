@@ -110,3 +110,35 @@ data class GitHubPullRequestEvent(
         @SerialName("avatar_url") val avatarUrl: String? = null
     )
 }
+
+@Serializable
+data class GitHubWorkflowRunEvent(
+    val action: String,
+    @SerialName("workflow_run") val workflowRun: WorkflowRun,
+    val repository: GitHubPushEvent.Repository,
+    val sender: GitHubPushEvent.Sender
+) {
+    @Serializable
+    data class WorkflowRun(
+        val id: Long,
+        val name: String,
+        val status: String,
+        val conclusion: String?,
+        @SerialName("html_url") val htmlUrl: String,
+        @SerialName("created_at") val createdAt: String,
+        @SerialName("updated_at") val updatedAt: String,
+        @SerialName("workflow_id") val workflowId: Long,
+        @SerialName("head_branch") val headBranch: String,
+        @SerialName("head_sha") val headSha: String,
+        @SerialName("check_suite_id") val checkSuiteId: Long,
+        @SerialName("actor") val actor: Actor,
+        @SerialName("run_number") val runNumber: Int
+    )
+
+    @Serializable
+    data class Actor(
+        val login: String,
+        val id: Long,
+        @SerialName("avatar_url") val avatarUrl: String? = null
+    )
+}

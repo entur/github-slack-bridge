@@ -237,7 +237,6 @@ class GitHubWebhookHandlerTest {
 
         webhookHandler.handleWebhook("push", pushEventPayload, "sha256=$signature", "dev-team")
 
-        // Verify that no messages were sent, since this is a feature branch
         assertEquals(0, mockSlackClient.sentMessages.size)
     }
 
@@ -293,12 +292,128 @@ class GitHubWebhookHandlerTest {
 
         webhookHandler.handleWebhook("push", pushEventPayload, "sha256=$signature", "dev-team")
 
-        // Verify that messages were sent, since this is a master branch
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
         assertTrue(message.text.contains("*testuser* pushed 1 commit to"))
         assertTrue(message.text.contains("user/test-repo:master"))
         assertTrue(message.text.contains("Fix bug in production"))
+    }
+
+    @Test
+    fun `test handling workflow run failure event`() = runBlocking {
+        val workflowRunEventPayload = """
+        {
+          "action": "completed",
+          "workflow_run": {
+            "id": 987654321,
+            "name": "CI Build",
+            "status": "completed",
+            "conclusion": "failure",
+            "html_url": "https://github.com/user/test-repo/actions/runs/987654321",
+            "created_at": "2025-06-05T12:00:00Z",
+            "updated_at": "2025-06-05T12:15:00Z",
+            "workflow_id": 123456,
+            "head_branch": "feature/new-feature",
+            "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
+            "check_suite_id": 123456789,
+            "actor": {
+              "login": "testuser",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            },
+            "run_number": 42
+          },
+          "repository": {
+            "id": 123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            "owner": {
+              "login": "user",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            }
+          },
+          "sender": {
+            "login": "testuser",
+            "id": 12345,
+            "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+          }
+        }
+        """.trimIndent()
+
+        val signature = generateSignature(workflowRunEventPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", workflowRunEventPayload, "sha256=$signature", "builds-channel")
+
+        assertEquals(1, mockSlackClient.sentMessages.size)
+        val message = mockSlackClient.sentMessages.first()
+
+        assertTrue(message.text.contains(":x: Build failed"))
+        assertTrue(message.text.contains("*CI Build* workflow run"))
+        assertTrue(message.text.contains("#42"))
+        assertTrue(message.text.contains("user/test-repo"))
+        assertTrue(message.text.contains("feature/new-feature"))
+        assertTrue(message.text.contains("abcdef1"))
+        assertTrue(message.text.contains("*testuser*"))
+
+        assertEquals("builds-channel", message.channel)
+    }
+
+    @Test
+    fun `test ignoring successful workflow run event`() = runBlocking {
+        val workflowRunEventPayload = """
+        {
+          "action": "completed",
+          "workflow_run": {
+            "id": 987654321,
+            "name": "CI Build",
+            "status": "completed",
+            "conclusion": "success",
+            "html_url": "https://github.com/user/test-repo/actions/runs/987654321",
+            "created_at": "2025-06-05T12:00:00Z",
+            "updated_at": "2025-06-05T12:15:00Z",
+            "workflow_id": 123456,
+            "head_branch": "feature/new-feature",
+            "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
+            "check_suite_id": 123456789,
+            "actor": {
+              "login": "testuser",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            },
+            "run_number": 42
+          },
+          "repository": {
+            "id": 123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            "owner": {
+              "login": "user",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            }
+          },
+          "sender": {
+            "login": "testuser",
+            "id": 12345,
+            "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+          }
+        }
+        """.trimIndent()
+
+        val signature = generateSignature(workflowRunEventPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", workflowRunEventPayload, "sha256=$signature", "builds-channel")
+
+        assertEquals(0, mockSlackClient.sentMessages.size)
     }
 
     private fun generateSignature(payload: String, secret: String): String {
