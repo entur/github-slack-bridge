@@ -5,12 +5,18 @@ import no.entur.github_slack_bridge.slack.SlackClient
 import no.entur.github_slack_bridge.slack.SlackMessage
 import org.slf4j.LoggerFactory
 import java.security.MessageDigest
+import java.time.Duration
+import java.time.Instant
+import java.util.concurrent.ConcurrentHashMap
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 
 open class GitHubWebhookHandler(private val slackClient: SlackClient, protected val webhookSecret: String) {
     private val logger = LoggerFactory.getLogger(GitHubWebhookHandler::class.java)
     private val json = Json { ignoreUnknownKeys = true }
+
+    private val recentlyFailedBuilds = ConcurrentHashMap<String, Instant>()
+    private val failureTrackingDuration = Duration.ofHours(48)
 
     open suspend fun handleWebhook(
         eventType: String?,
@@ -164,30 +170,73 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             val workflowRun = workflowRunEvent.workflowRun
             val repository = workflowRunEvent.repository
 
-            if (workflowRun.status != "completed" || workflowRun.conclusion != "failure") {
-                logger.info("Ignoring workflow run that is not a failure: status=${workflowRun.status}, conclusion=${workflowRun.conclusion}")
-                return
+            val workflowKey = "${workflowRun.workflowId}:${workflowRun.headBranch}"
+
+            if (workflowRun.status == "completed") {
+                val actorName = workflowRun.actor.login
+                val branchName = workflowRun.headBranch
+                val shortSha = workflowRun.headSha.take(7)
+
+                if (workflowRun.conclusion == "failure") {
+                    recentlyFailedBuilds[workflowKey] = Instant.now()
+
+                    val message = SlackMessage(
+                        text = ":x: Build failed: *${workflowRun.name}* workflow run " +
+                              "(<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) " +
+                              "in <${repository.htmlUrl}|${repository.fullName}> " +
+                              "on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>) " +
+                              "by *${actorName}*",
+                        channel = channel,
+                        username = "bottie",
+                    )
+
+                    slackClient.sendMessage(message)
+                    logger.info("Sent notification for failed build: ${workflowRun.name} #${workflowRun.runNumber}")
+                } else if (workflowRun.conclusion == "success") {
+                    val lastFailureTime = recentlyFailedBuilds.remove(workflowKey)
+
+                    if (lastFailureTime != null) {
+                        val timeSinceFailure = Duration.between(lastFailureTime, Instant.now())
+
+                        if (timeSinceFailure <= failureTrackingDuration) {
+                            val message = SlackMessage(
+                                text = ":white_check_mark: Build fixed: *${workflowRun.name}* workflow run " +
+                                      "(<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) " +
+                                      "in <${repository.htmlUrl}|${repository.fullName}> " +
+                                      "on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>) " +
+                                      "by *${actorName}* is now passing",
+                                channel = channel,
+                                username = "bottie",
+                            )
+
+                            slackClient.sendMessage(message)
+                            logger.info("Sent notification for fixed build: ${workflowRun.name} #${workflowRun.runNumber}")
+                        }
+                    } else {
+                        logger.info("Ignoring successful workflow run that wasn't previously failing: ${workflowRun.name} #${workflowRun.runNumber}")
+                    }
+                }
+            } else {
+                logger.info("Ignoring workflow run with status: ${workflowRun.status}")
             }
 
-            val actorName = workflowRun.actor.login
-            val branchName = workflowRun.headBranch
-            val shortSha = workflowRun.headSha.take(7)
-
-            val message = SlackMessage(
-                text = ":x: Build failed: *${workflowRun.name}* workflow run " +
-                        "(<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) " +
-                        "in <${repository.htmlUrl}|${repository.fullName}> " +
-                        "on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>) " +
-                        "by *${actorName}*",
-                channel = channel,
-                username = "bottie",
-            )
-
-            slackClient.sendMessage(message)
-            logger.info("Sent notification for failed build: ${workflowRun.name} #${workflowRun.runNumber}")
+            cleanupOldFailedBuilds()
         } catch (e: Exception) {
             logger.error("Error processing workflow_run event", e)
             throw e
+        }
+    }
+
+    private fun cleanupOldFailedBuilds() {
+        val now = Instant.now()
+        val keysToRemove = recentlyFailedBuilds.entries
+            .filter { (_, failureTime) ->
+                Duration.between(failureTime, now) > failureTrackingDuration
+            }
+            .map { it.key }
+
+        keysToRemove.forEach { key ->
+            recentlyFailedBuilds.remove(key)
         }
     }
 }

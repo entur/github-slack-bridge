@@ -416,6 +416,176 @@ class GitHubWebhookHandlerTest {
         assertEquals(0, mockSlackClient.sentMessages.size)
     }
 
+    @Test
+    fun `test successful workflow run after failure sends notification`() = runBlocking {
+        val failedWorkflowRunPayload = """
+        {
+          "action": "completed",
+          "workflow_run": {
+            "id": 987654321,
+            "name": "CI Build",
+            "status": "completed",
+            "conclusion": "failure",
+            "html_url": "https://github.com/user/test-repo/actions/runs/987654321",
+            "created_at": "2025-06-05T12:00:00Z",
+            "updated_at": "2025-06-05T12:15:00Z",
+            "workflow_id": 123456,
+            "head_branch": "feature/new-feature",
+            "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
+            "check_suite_id": 123456789,
+            "actor": {
+              "login": "testuser",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            },
+            "run_number": 42
+          },
+          "repository": {
+            "id": 123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            "owner": {
+              "login": "user",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            }
+          },
+          "sender": {
+            "login": "testuser",
+            "id": 12345,
+            "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+          }
+        }
+        """.trimIndent()
+
+        val successWorkflowRunPayload = """
+        {
+          "action": "completed",
+          "workflow_run": {
+            "id": 987654322,
+            "name": "CI Build",
+            "status": "completed",
+            "conclusion": "success",
+            "html_url": "https://github.com/user/test-repo/actions/runs/987654322",
+            "created_at": "2025-06-05T13:00:00Z",
+            "updated_at": "2025-06-05T13:15:00Z",
+            "workflow_id": 123456,
+            "head_branch": "feature/new-feature",
+            "head_sha": "bcdef1234567890abcdef1234567890abcdef123",
+            "check_suite_id": 123456790,
+            "actor": {
+              "login": "testuser",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            },
+            "run_number": 43
+          },
+          "repository": {
+            "id": 123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            "owner": {
+              "login": "user",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            }
+          },
+          "sender": {
+            "login": "testuser",
+            "id": 12345,
+            "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+          }
+        }
+        """.trimIndent()
+
+        val failureSignature = generateSignature(failedWorkflowRunPayload, testSecret)
+        val successSignature = generateSignature(successWorkflowRunPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        // First, send the failed build notification
+        webhookHandler.handleWebhook("workflow_run", failedWorkflowRunPayload, "sha256=$failureSignature", "builds-channel")
+
+        // Then send the successful build notification
+        webhookHandler.handleWebhook("workflow_run", successWorkflowRunPayload, "sha256=$successSignature", "builds-channel")
+
+        // We should get 2 messages: one for the failure and one for the success
+        assertEquals(2, mockSlackClient.sentMessages.size)
+
+        // Check the failure message
+        val failureMessage = mockSlackClient.sentMessages[0]
+        assertTrue(failureMessage.text.contains(":x: Build failed"))
+        assertTrue(failureMessage.text.contains("*CI Build* workflow run"))
+
+        // Check the success message
+        val successMessage = mockSlackClient.sentMessages[1]
+        assertTrue(successMessage.text.contains(":white_check_mark: Build fixed"))
+        assertTrue(successMessage.text.contains("*CI Build* workflow run"))
+        assertTrue(successMessage.text.contains("#43"))
+        assertTrue(successMessage.text.contains("now passing"))
+
+        assertEquals("builds-channel", successMessage.channel)
+    }
+
+    @Test
+    fun `test successful workflow run without previous failure doesn't send notification`() = runBlocking {
+        val successWorkflowRunPayload = """
+        {
+          "action": "completed",
+          "workflow_run": {
+            "id": 987654322,
+            "name": "CI Build",
+            "status": "completed",
+            "conclusion": "success",
+            "html_url": "https://github.com/user/test-repo/actions/runs/987654322",
+            "created_at": "2025-06-05T13:00:00Z",
+            "updated_at": "2025-06-05T13:15:00Z",
+            "workflow_id": 123456,
+            "head_branch": "feature/new-feature",
+            "head_sha": "bcdef1234567890abcdef1234567890abcdef123",
+            "check_suite_id": 123456790,
+            "actor": {
+              "login": "testuser",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            },
+            "run_number": 43
+          },
+          "repository": {
+            "id": 123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            "owner": {
+              "login": "user",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            }
+          },
+          "sender": {
+            "login": "testuser",
+            "id": 12345,
+            "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+          }
+        }
+        """.trimIndent()
+
+        val signature = generateSignature(successWorkflowRunPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        // Send only a successful build notification with no previous failure
+        webhookHandler.handleWebhook("workflow_run", successWorkflowRunPayload, "sha256=$signature", "builds-channel")
+
+        // Verify that no messages were sent for successful workflow runs without previous failures
+        assertEquals(0, mockSlackClient.sentMessages.size)
+    }
+
     private fun generateSignature(payload: String, secret: String): String {
         val secretKeySpec = SecretKeySpec(secret.toByteArray(), "HmacSHA256")
         val mac = Mac.getInstance("HmacSHA256")
