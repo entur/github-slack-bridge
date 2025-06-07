@@ -89,13 +89,14 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             }
 
             val commitCount = pushEvent.commits.size
-            val authorLogin = pushEvent.commits.firstOrNull()?.author?.username ?: pushEvent.sender.login
-            val formattedCommits = formatCommitMessages(pushEvent.commits)
+            val authorLogin = pushEvent.sender.login
+            val firstCommit = pushEvent.commits.first()
+            val firstCommitMsg = firstCommit.message.replace("\n", " ").take(40)
+            val compareUrl = pushEvent.compare
             val pluralSuffix = if (commitCount > 1) "s" else ""
 
             val message = SlackMessage(
-                text = "pushed ${commitCount} commit${pluralSuffix} to " +
-                        "<${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}>\n$formattedCommits",
+                text = "Pushed $commitCount commit$pluralSuffix to <${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}> [diff]($compareUrl): $firstCommitMsg",
                 channel = channel,
                 username = authorLogin,
             )
@@ -108,11 +109,10 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
     }
 
     private fun formatCommitMessages(commits: List<GitHubCommit>): String {
-        return commits.joinToString("\n") { commit ->
-            val shortId = commit.id.take(7)
-            val shortMessage = commit.message.lines().first()
-            "• <${commit.url}|$shortId>: $shortMessage"
-        }
+        val commit = commits.first()
+        val shortId = commit.id.take(7)
+        val shortMessage = commit.message.lines().first()
+        return "• <${commit.url}|$shortId>: $shortMessage"
     }
 
     private suspend fun handlePullRequestEvent(payload: String, channel: String?) {
@@ -185,10 +185,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                     recentlyFailedBuilds[workflowKey] = Instant.now()
 
                     val message = SlackMessage(
-                        text = ":x: Build failed: *${workflowRun.name}* workflow run " +
-                              "(<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) " +
-                              "in <${repository.htmlUrl}|${repository.fullName}> " +
-                              "on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
+                        text = ":x: Build failed: *${workflowRun.name}* workflow run (<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) in <${repository.htmlUrl}|${repository.fullName}> on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
                         channel = channel,
                         username = actorName,
                     )
@@ -203,10 +200,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
                         if (timeSinceFailure <= failureTrackingDuration) {
                             val message = SlackMessage(
-                                text = ":white_check_mark: Build fixed: *${workflowRun.name}* workflow run " +
-                                      "(<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) " +
-                                      "in <${repository.htmlUrl}|${repository.fullName}> " +
-                                      "on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>) is now passing",
+                                text = ":white_check_mark: Build fixed: *${workflowRun.name}* workflow run (<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) in <${repository.htmlUrl}|${repository.fullName}> on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>) is now passing",
                                 channel = channel,
                                 username = actorName,
                             )
