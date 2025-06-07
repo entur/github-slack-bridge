@@ -176,6 +176,10 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                 val branchName = workflowRun.headBranch
                 val shortSha = workflowRun.headSha.take(7)
 
+                if (branchName != "main" && branchName != "master") {
+                    logger.info("Skipping workflow_run event for branch: $branchName (not main or master)")
+                    return
+                }
                 if (workflowRun.conclusion == "failure") {
                     recentlyFailedBuilds[workflowKey] = Instant.now()
 
