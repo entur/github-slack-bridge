@@ -74,7 +74,7 @@ class GitHubWebhookHandlerTest {
         assertTrue(message.text.contains("pushed 1 commit"))
         assertTrue(message.text.contains("user/test-repo:main"))
         assertTrue(message.text.contains("Fix bug in authentication"))
-        assertTrue(message.text.contains("[diff](https://github.com/user/test-repo/compare/oldsha...newsha)"))
+        assertTrue(message.text.contains("<https://github.com/user/test-repo/compare/oldsha...newsha|Compare>"))
 
         assertEquals("dev-team", message.channel)
     }
@@ -300,7 +300,7 @@ class GitHubWebhookHandlerTest {
         assertTrue(message.text.contains("pushed 1 commit"))
         assertTrue(message.text.contains("user/test-repo:master"))
         assertTrue(message.text.contains("Fix bug in production"))
-        assertTrue(message.text.contains("[diff](https://github.com/user/test-repo/compare/oldsha...newsha)"))
+        assertTrue(message.text.contains("<https://github.com/user/test-repo/compare/oldsha...newsha|Compare>"))
     }
 
     @Test
