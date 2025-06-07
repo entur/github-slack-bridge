@@ -9,7 +9,8 @@ data class GitHubPushEvent(
     @SerialName("head_commit") val headCommit: HeadCommit? = null,
     val commits: List<GitHubCommit> = emptyList(),
     val repository: Repository,
-    val sender: Sender
+    val sender: Sender,
+    val compare: String
 ) {
     @Serializable
     data class HeadCommit(

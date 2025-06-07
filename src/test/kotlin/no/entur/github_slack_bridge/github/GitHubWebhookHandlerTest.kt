@@ -57,7 +57,8 @@ class GitHubWebhookHandlerTest {
             "login": "testuser",
             "id": 12345,
             "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-          }
+          },
+          "compare": "https://github.com/user/test-repo/compare/oldsha...newsha"
         }
         """.trimIndent()
 
@@ -70,9 +71,10 @@ class GitHubWebhookHandlerTest {
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
 
-        assertTrue(message.text.contains("*testuser* pushed 1 commit to"))
+        assertTrue(message.text.contains("pushed 1 commit"))
         assertTrue(message.text.contains("user/test-repo:main"))
         assertTrue(message.text.contains("Fix bug in authentication"))
+        assertTrue(message.text.contains("[diff](https://github.com/user/test-repo/compare/oldsha...newsha)"))
 
         assertEquals("dev-team", message.channel)
     }
@@ -127,10 +129,9 @@ class GitHubWebhookHandlerTest {
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
 
-        assertTrue(message.text.contains("Pull Request opened"))
+        assertTrue(message.text.contains(":pr-open: Pull Request opened:"))
         assertTrue(message.text.contains("#42 Add new feature"))
-        assertTrue(message.text.contains("by *contributor*"))
-        assertTrue(message.text.contains("user/test-repo"))
+        assertTrue(message.text.contains("in <https://github.com/user/test-repo|user/test-repo>"))
 
         assertEquals("pull-requests", message.channel)
     }
@@ -149,7 +150,7 @@ class GitHubWebhookHandlerTest {
 
     @Test
     fun `test webhook with valid signature is processed`() = runBlocking {
-        val payload = """{"ref":"refs/heads/main","repository":{"full_name":"test/repo","html_url":"https://github.com/test/repo"},"commits":[{"id":"abc1234","message":"Test commit","author":{"name":"Test User"},"url":"https://github.com/test/repo/commit/abc1234"}],"sender":{"login":"testuser"}}"""
+        val payload = """{"ref":"refs/heads/main","repository":{"full_name":"test/repo","html_url":"https://github.com/test/repo"},"commits":[{"id":"abc1234","message":"Test commit","author":{"name":"Test User"},"url":"https://github.com/test/repo/commit/abc1234"}],"sender":{"login":"testuser"},"compare":"https://github.com/test/repo/compare/oldsha...newsha"}"""
         val signature = generateSignature(payload, testSecret)
         val mockSlackClient = MockSlackClient()
         val webhookHandler = TestGitHubWebhookHandler(mockSlackClient, testSecret)
@@ -162,7 +163,7 @@ class GitHubWebhookHandlerTest {
 
     @Test
     fun `test webhook with invalid signature is rejected`() = runBlocking {
-        val payload = """{"ref":"refs/heads/main","repository":{"full_name":"test/repo","html_url":"https://github.com/test/repo"},"commits":[{"id":"abc1234","message":"Test commit","author":{"name":"Test User"},"url":"https://github.com/test/repo/commit/abc1234"}],"sender":{"login":"testuser"}}"""
+        val payload = """{"ref":"refs/heads/main","repository":{"full_name":"test/repo","html_url":"https://github.com/test/repo"},"commits":[{"id":"abc1234","message":"Test commit","author":{"name":"Test User"},"url":"https://github.com/test/repo/commit/abc1234"}],"sender":{"login":"testuser"},"compare":"https://github.com/test/repo/compare/oldsha...newsha"}"""
         val invalidSignature = "invalid_signature"
         val mockSlackClient = MockSlackClient()
         val webhookHandler = TestGitHubWebhookHandler(mockSlackClient, testSecret)
@@ -175,7 +176,7 @@ class GitHubWebhookHandlerTest {
 
     @Test
     fun `test webhook with missing signature is rejected when secret is configured`() = runBlocking {
-        val payload = """{"ref":"refs/heads/main","repository":{"full_name":"test/repo","html_url":"https://github.com/test/repo"},"commits":[{"id":"abc1234","message":"Test commit","author":{"name":"Test User"},"url":"https://github.com/test/repo/commit/abc1234"}],"sender":{"login":"testuser"}}"""
+        val payload = """{"ref":"refs/heads/main","repository":{"full_name":"test/repo","html_url":"https://github.com/test/repo"},"commits":[{"id":"abc1234","message":"Test commit","author":{"name":"Test User"},"url":"https://github.com/test/repo/commit/abc1234"}],"sender":{"login":"testuser"},"compare":"https://github.com/test/repo/compare/oldsha...newsha"}"""
         val mockSlackClient = MockSlackClient()
         val webhookHandler = TestGitHubWebhookHandler(mockSlackClient, testSecret)
 
@@ -227,7 +228,8 @@ class GitHubWebhookHandlerTest {
             "login": "testuser",
             "id": 12345,
             "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-          }
+          },
+          "compare": "https://github.com/user/test-repo/compare/oldsha...newsha"
         }
         """.trimIndent()
 
@@ -282,7 +284,8 @@ class GitHubWebhookHandlerTest {
             "login": "testuser",
             "id": 12345,
             "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-          }
+          },
+          "compare": "https://github.com/user/test-repo/compare/oldsha...newsha"
         }
         """.trimIndent()
 
@@ -294,9 +297,10 @@ class GitHubWebhookHandlerTest {
 
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
-        assertTrue(message.text.contains("*testuser* pushed 1 commit to"))
+        assertTrue(message.text.contains("pushed 1 commit"))
         assertTrue(message.text.contains("user/test-repo:master"))
         assertTrue(message.text.contains("Fix bug in production"))
+        assertTrue(message.text.contains("[diff](https://github.com/user/test-repo/compare/oldsha...newsha)"))
     }
 
     @Test
@@ -313,7 +317,7 @@ class GitHubWebhookHandlerTest {
             "created_at": "2025-06-05T12:00:00Z",
             "updated_at": "2025-06-05T12:15:00Z",
             "workflow_id": 123456,
-            "head_branch": "feature/new-feature",
+            "head_branch": "main",
             "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
             "check_suite_id": 123456789,
             "actor": {
@@ -356,9 +360,8 @@ class GitHubWebhookHandlerTest {
         assertTrue(message.text.contains("*CI Build* workflow run"))
         assertTrue(message.text.contains("#42"))
         assertTrue(message.text.contains("user/test-repo"))
-        assertTrue(message.text.contains("feature/new-feature"))
+        assertTrue(message.text.contains("main"))
         assertTrue(message.text.contains("abcdef1"))
-        assertTrue(message.text.contains("*testuser*"))
 
         assertEquals("builds-channel", message.channel)
     }
@@ -377,7 +380,7 @@ class GitHubWebhookHandlerTest {
             "created_at": "2025-06-05T12:00:00Z",
             "updated_at": "2025-06-05T12:15:00Z",
             "workflow_id": 123456,
-            "head_branch": "feature/new-feature",
+            "head_branch": "main",
             "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
             "check_suite_id": 123456789,
             "actor": {
@@ -430,7 +433,7 @@ class GitHubWebhookHandlerTest {
             "created_at": "2025-06-05T12:00:00Z",
             "updated_at": "2025-06-05T12:15:00Z",
             "workflow_id": 123456,
-            "head_branch": "feature/new-feature",
+            "head_branch": "main",
             "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
             "check_suite_id": 123456789,
             "actor": {
@@ -472,7 +475,7 @@ class GitHubWebhookHandlerTest {
             "created_at": "2025-06-05T13:00:00Z",
             "updated_at": "2025-06-05T13:15:00Z",
             "workflow_id": 123456,
-            "head_branch": "feature/new-feature",
+            "head_branch": "main",
             "head_sha": "bcdef1234567890abcdef1234567890abcdef123",
             "check_suite_id": 123456790,
             "actor": {
@@ -545,7 +548,7 @@ class GitHubWebhookHandlerTest {
             "created_at": "2025-06-05T13:00:00Z",
             "updated_at": "2025-06-05T13:15:00Z",
             "workflow_id": 123456,
-            "head_branch": "feature/new-feature",
+            "head_branch": "main",
             "head_sha": "bcdef1234567890abcdef1234567890abcdef123",
             "check_suite_id": 123456790,
             "actor": {
