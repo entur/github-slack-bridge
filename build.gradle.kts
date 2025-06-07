@@ -50,12 +50,6 @@ testing {
     }
 }
 
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(23)
-    }
-}
-
 application {
     mainClass = "no.entur.github_slack_bridge.AppKt"
 }
