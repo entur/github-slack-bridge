@@ -71,7 +71,7 @@ class GitHubWebhookHandlerTest {
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
 
-        assertTrue(message.text.contains("pushed 1 commit"))
+        assertTrue(message.text.contains(":rocket: pushed 1 commit"))
         assertTrue(message.text.contains("user/test-repo:main"))
         assertTrue(message.text.contains("Fix bug in authentication"))
         assertTrue(message.text.contains("<https://github.com/user/test-repo/compare/oldsha...newsha|Compare>"))
@@ -297,7 +297,7 @@ class GitHubWebhookHandlerTest {
 
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
-        assertTrue(message.text.contains("pushed 1 commit"))
+        assertTrue(message.text.contains(":rocket: pushed 1 commit"))
         assertTrue(message.text.contains("user/test-repo:master"))
         assertTrue(message.text.contains("Fix bug in production"))
         assertTrue(message.text.contains("<https://github.com/user/test-repo/compare/oldsha...newsha|Compare>"))
@@ -356,13 +356,11 @@ class GitHubWebhookHandlerTest {
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
 
-        assertTrue(message.text.contains(":x: Build failed"))
-        assertTrue(message.text.contains("*CI Build* workflow run"))
-        assertTrue(message.text.contains("#42"))
+        assertTrue(message.text.contains(":x: build failed"))
+        assertTrue(message.text.contains("CI Build #42"))
         assertTrue(message.text.contains("user/test-repo"))
-        assertTrue(message.text.contains("main"))
         assertTrue(message.text.contains("abcdef1"))
-
+        assertEquals("testuser", message.username)
         assertEquals("builds-channel", message.channel)
     }
 
@@ -510,27 +508,25 @@ class GitHubWebhookHandlerTest {
         val mockSlackClient = MockSlackClient()
         val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
 
-        // First, send the failed build notification
         webhookHandler.handleWebhook("workflow_run", failedWorkflowRunPayload, "sha256=$failureSignature", "builds-channel")
 
-        // Then send the successful build notification
         webhookHandler.handleWebhook("workflow_run", successWorkflowRunPayload, "sha256=$successSignature", "builds-channel")
 
-        // We should get 2 messages: one for the failure and one for the success
         assertEquals(2, mockSlackClient.sentMessages.size)
 
-        // Check the failure message
         val failureMessage = mockSlackClient.sentMessages[0]
-        assertTrue(failureMessage.text.contains(":x: Build failed"))
-        assertTrue(failureMessage.text.contains("*CI Build* workflow run"))
+        assertTrue(failureMessage.text.contains(":x: build failed"))
+        assertTrue(failureMessage.text.contains("CI Build #42"))
+        assertTrue(failureMessage.text.contains("user/test-repo"))
+        assertTrue(failureMessage.text.contains("abcdef1"))
+        assertEquals("testuser", failureMessage.username)
 
-        // Check the success message
         val successMessage = mockSlackClient.sentMessages[1]
-        assertTrue(successMessage.text.contains(":white_check_mark: Build fixed"))
-        assertTrue(successMessage.text.contains("*CI Build* workflow run"))
-        assertTrue(successMessage.text.contains("#43"))
-        assertTrue(successMessage.text.contains("now passing"))
-
+        assertTrue(successMessage.text.contains(":white_check_mark: build fixed"))
+        assertTrue(successMessage.text.contains("CI Build #43"))
+        assertTrue(successMessage.text.contains("user/test-repo"))
+        assertTrue(successMessage.text.contains("bcdef1"))
+        assertEquals("testuser", successMessage.username)
         assertEquals("builds-channel", successMessage.channel)
     }
 

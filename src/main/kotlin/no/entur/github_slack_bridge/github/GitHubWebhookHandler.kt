@@ -90,13 +90,12 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
             val commitCount = pushEvent.commits.size
             val authorLogin = pushEvent.sender.login
-            val firstCommit = pushEvent.commits.first()
-            val firstCommitMsg = firstCommit.message.replace("\n", " ").take(40)
+            val firstCommitMsg = formatCommitMessages(pushEvent.commits)
             val compareUrl = pushEvent.compare
             val pluralSuffix = if (commitCount > 1) "s" else ""
 
             val message = SlackMessage(
-                text = "pushed $commitCount commit$pluralSuffix to <${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}> | <${compareUrl}|Compare>: $firstCommitMsg",
+                text = ":rocket: pushed $commitCount commit$pluralSuffix to <${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}> | <${compareUrl}|Compare>: $firstCommitMsg",
                 channel = channel,
                 username = authorLogin,
             )
@@ -110,9 +109,12 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
     private fun formatCommitMessages(commits: List<GitHubCommit>): String {
         val commit = commits.first()
+        var message = commit.message.lines().first()
         val shortId = commit.id.take(7)
-        val shortMessage = commit.message.lines().first()
-        return "• <${commit.url}|$shortId>: $shortMessage"
+        if (message.length > 40) {
+            message = message.replace("\n", " ").take(40) + "…"
+        }
+        return "<${commit.url}|$shortId>: $message"
     }
 
     private suspend fun handlePullRequestEvent(payload: String, channel: String?) {
@@ -148,9 +150,9 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
     private fun getPullRequestEmoji(action: String, isMerged: Boolean): String {
         return when {
             action == "opened" || action == "reopened" -> ":pr-open:"
-            isMerged -> ":merged:"
+            isMerged -> ":pr-merged:"
             action == "closed" -> ":pr-closed:"
-            else -> ":information_source:"
+            else -> ":info:"
         }
     }
 
@@ -170,22 +172,27 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             val workflowRun = workflowRunEvent.workflowRun
             val repository = workflowRunEvent.repository
 
-            val workflowKey = "${workflowRun.workflowId}:${workflowRun.headBranch}"
+            val branchName = workflowRun.headBranch
+
+            if (branchName != "main" && branchName != "master") {
+                logger.info("Skipping workflow run event for branch: $branchName (not main or master)")
+                return
+            }
+
+            val workflowKey = "${workflowRun.workflowId}:${branchName}"
 
             if (workflowRun.status == "completed") {
                 val actorName = workflowRun.actor.login
-                val branchName = workflowRun.headBranch
                 val shortSha = workflowRun.headSha.take(7)
+                val repoName = repository.fullName
 
-                if (branchName != "main" && branchName != "master") {
-                    logger.info("Skipping workflow_run event for branch: $branchName (not main or master)")
-                    return
-                }
                 if (workflowRun.conclusion == "failure") {
                     recentlyFailedBuilds[workflowKey] = Instant.now()
 
                     val message = SlackMessage(
-                        text = ":x: Build failed: *${workflowRun.name}* workflow run (<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) in <${repository.htmlUrl}|${repository.fullName}> on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
+                        text = ":x: build failed: <${workflowRun.htmlUrl}|${workflowRun.name} #${workflowRun.runNumber}> " +
+                                "in <${repository.htmlUrl}|$repoName> " +
+                                "(<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
                         channel = channel,
                         username = actorName,
                     )
@@ -200,7 +207,9 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
                         if (timeSinceFailure <= failureTrackingDuration) {
                             val message = SlackMessage(
-                                text = ":white_check_mark: Build fixed: *${workflowRun.name}* workflow run (<${workflowRun.htmlUrl}|#${workflowRun.runNumber}>) in <${repository.htmlUrl}|${repository.fullName}> on branch `${branchName}` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>) is now passing",
+                                text = ":white_check_mark: build fixed: <${workflowRun.htmlUrl}|${workflowRun.name} #${workflowRun.runNumber}> " +
+                                        "in <${repository.htmlUrl}|$repoName> " +
+                                        "(<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
                                 channel = channel,
                                 username = actorName,
                             )
