@@ -15,8 +15,9 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
     private val logger = LoggerFactory.getLogger(GitHubWebhookHandler::class.java)
     private val json = Json { ignoreUnknownKeys = true }
 
+    // Consider persisting this:
     private val recentlyFailedBuilds = ConcurrentHashMap<String, Instant>()
-    private val failureTrackingDuration = Duration.ofHours(48)
+    private val failureTrackingDuration = Duration.ofDays(7)
 
     open suspend fun handleWebhook(
         eventType: String?,
@@ -186,10 +187,11 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                 val repoName = repository.fullName
 
                 if (workflowRun.conclusion == "failure") {
+                    val again = if (recentlyFailedBuilds.contains(workflowKey)) " again" else ""
                     recentlyFailedBuilds[workflowKey] = Instant.now()
 
                     val message = SlackMessage(
-                        text = ":x: build failed: <${workflowRun.htmlUrl}|${workflowRun.name} #${workflowRun.runNumber}> " +
+                        text = ":x: build failed$again: <${workflowRun.htmlUrl}|${workflowRun.name} #${workflowRun.runNumber}> " +
                                 "in <${repository.htmlUrl}|$repoName> " +
                                 "(<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
                         channel = channel,
