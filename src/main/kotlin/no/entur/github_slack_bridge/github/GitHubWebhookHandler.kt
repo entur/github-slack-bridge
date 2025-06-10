@@ -92,10 +92,11 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             val authorLogin = pushEvent.sender.login
             val firstCommitMsg = formatCommitMessages(pushEvent.commits)
             val compareUrl = pushEvent.compare
+            val sha = pushEvent.commits.first().id.take(7)
             val pluralSuffix = if (commitCount > 1) "s" else ""
 
             val message = SlackMessage(
-                text = ":rocket: pushed $commitCount commit$pluralSuffix to <${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}> | <${compareUrl}|compare>: $firstCommitMsg",
+                text = ":rocket: pushed $commitCount commit$pluralSuffix to <${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}> (<${compareUrl}|$sha>) $firstCommitMsg",
                 channel = channel,
                 username = authorLogin,
             )
@@ -108,13 +109,11 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
     }
 
     private fun formatCommitMessages(commits: List<GitHubCommit>): String {
-        val commit = commits.first()
-        var message = commit.message.lines().first()
-        val shortId = commit.id.take(7)
+        var message = commits.first().message.lines().first()
         if (message.length > 40) {
             message = message.replace("\n", " ").take(40) + "…"
         }
-        return "<${commit.url}|$shortId>: $message"
+        return message
     }
 
     private suspend fun handlePullRequestEvent(payload: String, channel: String?) {
