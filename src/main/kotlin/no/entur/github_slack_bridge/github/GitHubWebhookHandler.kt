@@ -95,7 +95,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             val pluralSuffix = if (commitCount > 1) "s" else ""
 
             val message = SlackMessage(
-                text = ":rocket: pushed $commitCount commit$pluralSuffix to <${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}> | <${compareUrl}|Compare>: $firstCommitMsg",
+                text = ":rocket: pushed $commitCount commit$pluralSuffix to <${pushEvent.repository.htmlUrl}/tree/${branchName}|${repoName}:${branchName}> | <${compareUrl}|compare>: $firstCommitMsg",
                 channel = channel,
                 username = authorLogin,
             )
