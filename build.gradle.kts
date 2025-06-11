@@ -23,9 +23,6 @@ dependencies {
     testImplementation(libs.ktor.server.test.host)
     testImplementation(libs.ktor.client.mock)
     testImplementation(libs.kotlin.test)
-    testImplementation(libs.kotlin.test.junit5)
-    testImplementation(libs.junit.jupiter)
-    testRuntimeOnly(libs.junit.jupiter)
     testImplementation(libs.kotlinx.coroutines.test)
 }
 
