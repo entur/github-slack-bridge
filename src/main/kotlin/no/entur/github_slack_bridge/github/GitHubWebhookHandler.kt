@@ -91,9 +91,9 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
             val commitCount = pushEvent.commits.size
             val authorLogin = pushEvent.sender.login
-            val firstCommitMsg = formatCommitMessages(pushEvent.commits)
+            val lastCommitMsg = formatCommitMessages(pushEvent.commits)
             val compareUrl = pushEvent.compare
-            val sha = pushEvent.commits.first().id.take(7)
+            val sha = pushEvent.commits.last().id.take(7)
             val pluralSuffix = if (commitCount > 1) "s" else ""
 
             val message = SlackMessage(
@@ -110,7 +110,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
     }
 
     private fun formatCommitMessages(commits: List<GitHubCommit>): String {
-        var message = commits.first().message.lines().first()
+        var message = commits.last().message.lines().first()
         if (message.length > 40) {
             message = message.replace("\n", " ").take(40) + "…"
         }
