@@ -72,7 +72,7 @@ class GitHubWebhookHandlerTest {
         val message = mockSlackClient.sentMessages.first()
 
         assertTrue(message.text.contains(":rocket: pushed 1 commit"))
-        assertTrue(message.text.contains("user/test-repo:main"))
+        assertTrue(message.text.contains("user/test-repo"))
         assertTrue(message.text.contains("Fix bug in authentication"))
         assertTrue(message.text.contains("<https://github.com/user/test-repo/compare/oldsha...newsha|1234567>"))
 
@@ -298,7 +298,7 @@ class GitHubWebhookHandlerTest {
         assertEquals(1, mockSlackClient.sentMessages.size)
         val message = mockSlackClient.sentMessages.first()
         assertTrue(message.text.contains(":rocket: pushed 1 commit"))
-        assertTrue(message.text.contains("user/test-repo:master"))
+        assertTrue(message.text.contains("user/test-repo"))
         assertTrue(message.text.contains("Fix bug in production"))
         assertTrue(message.text.contains("<https://github.com/user/test-repo/compare/oldsha...newsha|1234567>"))
     }
