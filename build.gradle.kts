@@ -3,6 +3,7 @@ plugins {
     application
     id("org.jetbrains.kotlin.plugin.serialization") version "2.1.20"
     alias(libs.plugins.shadow)
+    alias(libs.plugins.versions)
 }
 
 repositories {
@@ -49,4 +50,17 @@ testing {
 
 application {
     mainClass = "no.entur.github_slack_bridge.AppKt"
+}
+
+fun isNonStable(version: String): Boolean {
+    val stableKeyword = listOf("RELEASE", "FINAL", "GA").any { version.uppercase().contains(it) }
+    val regex = "^[0-9,.v-]+(-r)?$".toRegex()
+    val isStable = stableKeyword || regex.matches(version)
+    return isStable.not()
+}
+
+tasks.dependencyUpdates {
+    rejectVersionIf {
+        isNonStable(candidate.version) && !isNonStable(currentVersion)
+    }
 }
