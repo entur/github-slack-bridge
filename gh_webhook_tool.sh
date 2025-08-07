@@ -38,6 +38,18 @@ require_argument() {
   fi
 }
 
+require_variable() {
+  local var_name="$1"
+  local var_value="$2"
+  local error_message="$3"
+
+  if [[ -z "${var_value:-}" ]]; then
+    echo "Error: $error_message" >&2
+    usage
+    exit 1
+  fi
+}
+
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
   case $1 in
@@ -89,23 +101,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [[ -z "${COMMAND:-}" ]]; then
-  echo "Error: No command specified" >&2
-  usage
-  exit 1
-fi
-
-if [[ -z "${SECRET:-}" ]]; then
-  echo "Error: --secret is required" >&2
-  usage
-  exit 1
-fi
-
-if [[ -z "${CHANNEL:-}" ]]; then
-  echo "Error: --channel is required" >&2
-  usage
-  exit 1
-fi
+require_variable "COMMAND" "${COMMAND:-}" "No command specified"
+require_variable "SECRET" "${SECRET:-}" "--secret is required"
+require_variable "CHANNEL" "${CHANNEL:-}" "--channel is required"
 
 FULL_WEBHOOK_URL="$WEBHOOK_URL/$CHANNEL"
 
