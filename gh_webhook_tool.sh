@@ -31,7 +31,8 @@ EOF
 
 require_argument() {
   local option="$1"
-  if [[ $# -lt 3 ]]; then
+  local remaining_args="$2"
+  if [[ $remaining_args -lt 2 ]]; then
     echo "Error: $option requires a value" >&2
     usage
     exit 1
