@@ -39,9 +39,8 @@ require_argument() {
 }
 
 require_variable() {
-  local var_name="$1"
-  local var_value="$2"
-  local error_message="$3"
+  local var_value="$1"
+  local error_message="$2"
 
   if [[ -z "${var_value:-}" ]]; then
     echo "Error: $error_message" >&2
@@ -101,9 +100,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-require_variable "COMMAND" "${COMMAND:-}" "No command specified"
-require_variable "SECRET" "${SECRET:-}" "--secret is required"
-require_variable "CHANNEL" "${CHANNEL:-}" "--channel is required"
+require_variable "${COMMAND:-}" "No command specified"
+require_variable "${SECRET:-}" "--secret is required"
+require_variable "${CHANNEL:-}" "--channel is required"
 
 FULL_WEBHOOK_URL="$WEBHOOK_URL/$CHANNEL"
 
