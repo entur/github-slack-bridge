@@ -2,13 +2,34 @@
 
 This service forwards GitHub webhook events to Slack channels.
 
-## API Endpoint
+## GitHub Webhook Setup Guide
+
+1. Go to your GitHub repository and click on **Settings**.
+2. Select **Webhooks** from the left sidebar.
+3. Click the **Add webhook** button.
+4. In the **Payload URL** field, enter: `https://your-deployment-url/webhook/your-slack-channel`
+    - Replace `your-deployment-url` with the base URL where this service is deployed (for EnTur, this is `github-slack-bridge.dev.entur.org`).
+    - Replace `your-slack-channel` with the name of the Slack channel you want to send notifications to.
+5. Set the **Content type** to `application/json`.
+6. In the **Secret** field, enter your webhook secret. **This field is mandatory** and must match the `GITHUB_WEBHOOK_SECRET` environment variable set in the service
+   (for EnTur, this is available in LastPass).
+7. Under **Which events would you like to trigger this webhook?**:
+    - Select **Let me select individual events**.
+    - Check the following events: `Push`, `Pull requests`, and `Workflow runs`.
+8. Make sure **Active** is checked.
+9. Click **Add webhook** to save your configuration.
+
+After setting up the webhook, GitHub will send a ping event to verify the connection. You should see this event in your service logs.
+
+## Server
+
+### API Endpoint
 
 **POST** `/webhook/{channel}`
 
 Configure your GitHub repository webhooks to send events to this endpoint. The `{channel}` parameter in the URL specifies which Slack channel should receive the notifications.
 
-## Service Configuration
+### Service Configuration
 
 This service requires the following environment variables (for EnTur, these are available in LastPass):
 
@@ -16,32 +37,11 @@ This service requires the following environment variables (for EnTur, these are 
   - Example: `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX`
 - `GITHUB_WEBHOOK_SECRET` - **Required**. The secret used to validate GitHub webhook payloads.
 
-## Supported GitHub Events
+### Supported GitHub Events
 
 - Push events (to main/master branches)
 - Pull request events (opened, closed, reopened)
 - Workflow run events (failed builds and fixed builds)
-
-## GitHub Webhook Setup Guide
-
-Follow these steps to configure a webhook in your GitHub repository:
-
-1. Go to your GitHub repository and click on **Settings**.
-2. Select **Webhooks** from the left sidebar.
-3. Click the **Add webhook** button.
-4. In the **Payload URL** field, enter: `https://your-deployment-url/webhook/your-slack-channel`
-   - Replace `your-deployment-url` with the base URL where this service is deployed. For EnTur, this is `github-slack-bridge.dev.entur.org`.
-   - Replace `your-slack-channel` with the name of the Slack channel you want to send notifications to.
-5. Set the **Content type** to `application/json`.
-6. In the **Secret** field, enter your webhook secret. **This field is mandatory** and must match the `GITHUB_WEBHOOK_SECRET` environment variable set in the service.
-   For EnTur, this is available in LastPass.
-7. Under **Which events would you like to trigger this webhook?**:
-   - Select **Let me select individual events**.
-   - Check the following events: `Push`, `Pull requests`, and `Workflow runs`.
-8. Make sure **Active** is checked.
-9. Click **Add webhook** to save your configuration.
-
-After setting up the webhook, GitHub will send a ping event to verify the connection. You should see this event in your service logs.
 
 ## Development
 
@@ -93,4 +93,4 @@ The project includes Helm charts for Kubernetes deployment in the `helm/` direct
 
 ## License
 
-This project is maintained by EnTur.
+This project is maintained by EnTur, using European Union Public License 1.2
