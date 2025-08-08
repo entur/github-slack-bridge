@@ -2,7 +2,7 @@
 
 This service forwards GitHub webhook events to Slack channels.
 
-## GitHub Webhook Setup Guide
+## Single-repository setup
 
 1. Go to your GitHub repository and click on **Settings**.
 2. Select **Webhooks** from the left sidebar.
@@ -21,9 +21,19 @@ This service forwards GitHub webhook events to Slack channels.
 
 After setting up the webhook, GitHub will send a ping event to verify the connection. You should see this event in your service logs.
 
-## Server
+## Batch setup
 
-### API Endpoint
+If you want to add the webhook to multiple repositories, you can use the `gh_webook_tool.sh` script to automate the process.
+For EnTur, the secret is available in LastPass. By default it *does not* make any changes. Add `--no-dry-run` to actually make changes:
+
+```bash
+./gh_webhook_tool.sh --secret 'webhook secret' --channel 'your-slack-channel' topic some-topic # For RoR we use 'ror'
+./gh_webhook_tool.sh --secret 'webhook secret' --channel 'your-slack-channel' team some-team # For RoR we use 'team-ruter-reiseplanlegger'
+```
+
+## Development
+
+### Server API Endpoint
 
 **POST** `/webhook/{channel}`
 
@@ -42,8 +52,6 @@ This service requires the following environment variables (for EnTur, these are 
 - Push events (to main/master branches)
 - Pull request events (opened, closed, reopened)
 - Workflow run events (failed builds and fixed builds)
-
-## Development
 
 ### Requirements
 
