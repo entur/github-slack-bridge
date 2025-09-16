@@ -95,10 +95,6 @@ java -jar build/libs/github-slack-bridge-all.jar
 ./gradlew build
 ```
 
-## Deployment
-
-The project includes Helm charts for Kubernetes deployment in the `helm/` directory.
-
 ## License
 
 This project is maintained by EnTur, using European Union Public License 1.2
