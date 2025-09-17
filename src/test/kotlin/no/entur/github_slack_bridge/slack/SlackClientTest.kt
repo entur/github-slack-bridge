@@ -15,6 +15,8 @@ import kotlin.test.assertTrue
 
 class SlackClientTest {
 
+    val dummyUrl = "https://hooks.slack.com/services/dummy/token"
+    
     @Test
     fun `test successful message sending`() = runBlocking {
         val mockEngine = MockEngine { request ->
@@ -29,7 +31,7 @@ class SlackClientTest {
         }
 
         val slackClient = createSlackClientWithMockEngine(
-            "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+            dummyUrl,
             mockEngine
         )
 
@@ -55,7 +57,7 @@ class SlackClientTest {
         }
 
         val slackClient = createSlackClientWithMockEngine(
-            "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+            dummyUrl,
             mockEngine
         )
 
@@ -77,7 +79,7 @@ class SlackClientTest {
         }
 
         val slackClient = createSlackClientWithMockEngine(
-            "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
+            dummyUrl,
             mockEngine
         )
 
