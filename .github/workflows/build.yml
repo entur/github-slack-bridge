@@ -31,3 +31,14 @@ jobs:
     with:
       image_artifact: ${{ needs.build.outputs.image_artifact }}
 
+  deploy:
+    if: ${{ github.event_name != 'pull_request' }}
+    needs: push
+    uses: entur/gha-helm/.github/workflows/deploy.yml@v1
+    with:
+      environment: dev
+      image: ${{ needs.push.outputs.image_name }}:${{ needs.push.outputs.image_tag}}
+      chart: helm/github-slack-bridge
+      namespace: github-slack-bridge
+      release_name: github-slack-bridge
+    secrets: inherit
