@@ -98,3 +98,4 @@ java -jar build/libs/github-slack-bridge-all.jar
 ## License
 
 This project is maintained by EnTur, using European Union Public License 1.2
+
