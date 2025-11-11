@@ -4,12 +4,15 @@ on:
   push:
   pull_request:
 
+concurrency:
+  group: "${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint:
     uses: entur/gha-docker/.github/workflows/lint.yml@v1
 
   gradle-build:
-    name: Proxy
     runs-on: ubuntu-latest
     permissions:
       contents: read
