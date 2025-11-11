@@ -22,5 +22,5 @@ kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotl
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]
-shadow = { id = "com.gradleup.shadow", version = "9.0.0" }
+shadow = { id = "com.gradleup.shadow", version = "9.2.2" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "ben-manes-versions" }
