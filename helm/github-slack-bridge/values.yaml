@@ -1,6 +1,6 @@
 common:
   app: github-slack-bridge
-  shortname: gthbslckbr # This ID is defined in .entur/project.yml
+  shortname: gthbslckbr # Defined in https://github.com/entur/ror-tf-gcp-common-infrastructure/blob/main/.entur/github-slack-bridge/app-gsb.yml
   team: team-ror
   ingress:
     enabled: true
