@@ -12,7 +12,7 @@ This service forwards GitHub webhook events to Slack channels.
     - Replace `your-slack-channel` with the name of the Slack channel you want to send notifications to.
 5. Set the **Content type** to `application/json`.
 6. In the **Secret** field, enter your webhook secret. **This field is mandatory** and must match the `GITHUB_WEBHOOK_SECRET` environment variable set in the service
-   (for EnTur, this is available in LastPass).
+   (for EnTur, this is available in 1Password).
 7. Under **Which events would you like to trigger this webhook?**:
     - Select **Let me select individual events**.
     - Check the following events: `Push`, `Pull requests`, and `Workflow runs`.
@@ -24,7 +24,7 @@ After setting up the webhook, GitHub will send a ping event to verify the connec
 ### Batch setup
 
 If you want to add the webhook to multiple repositories, you can use the `gh_webook_tool.sh` script to automate the process.
-For EnTur, the secret is available in LastPass. By default it *does not* make any changes. Add `--no-dry-run` to actually make changes:
+For EnTur, the secret is available in 1Password. By default it *does not* make any changes. Add `--no-dry-run` to actually make changes:
 
 ```bash
 ./gh_webhook_tool.sh --secret 'webhook secret' --channel 'your-slack-channel' topic some-topic # For RoR we use 'ror'
@@ -41,7 +41,7 @@ Configure your GitHub repository webhooks to send events to this endpoint. The `
 
 ### Service Configuration
 
-This service requires the following environment variables (for EnTur, these are available in LastPass):
+This service requires the following environment variables (for EnTur, these are available in 1Password):
 
 - `SLACK_WEBHOOK_URL` - **Required**. The Slack incoming webhook URL that messages will be sent to.
   - Example: `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX`
