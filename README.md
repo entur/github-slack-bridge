@@ -27,8 +27,8 @@ If you want to add the webhook to multiple repositories, you can use the `gh_web
 For EnTur, the secret is available in 1Password. By default it *does not* make any changes. Add `--no-dry-run` to actually make changes:
 
 ```bash
-./gh_webhook_tool.sh --secret 'webhook secret' --channel 'your-slack-channel' topic some-topic # For RoR we use 'ror'
-./gh_webhook_tool.sh --secret 'webhook secret' --channel 'your-slack-channel' team some-team # For RoR we use 'team-ruter-reiseplanlegger'
+./batch_add_webhook.sh --secret 'webhook secret' --channel 'your-slack-channel' topic some-topic # For RoR we use 'ror'
+./batch_add_webhook.sh --secret 'webhook secret' --channel 'your-slack-channel' team some-team # For RoR we use 'team-ruter-reiseplanlegger'
 ```
 
 ## Development
