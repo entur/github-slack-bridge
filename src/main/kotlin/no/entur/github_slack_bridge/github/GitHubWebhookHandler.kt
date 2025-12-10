@@ -194,7 +194,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                     val message = SlackMessage(
                         text = ":x: build failed$again: <${workflowRun.htmlUrl}|$workflowName #${workflowRun.runNumber}> " +
                                 "in <${repository.htmlUrl}|$repoName> " +
-                                "(<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
+                                "on `$branchName` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
                         channel = channel,
                         username = actorName,
                     )
@@ -211,7 +211,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                             val message = SlackMessage(
                                 text = ":white_check_mark: build fixed: <${workflowRun.htmlUrl}|$workflowName #${workflowRun.runNumber}> " +
                                         "in <${repository.htmlUrl}|$repoName> " +
-                                        "(<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
+                                        "on `$branchName` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
                                 channel = channel,
                                 username = actorName,
                             )
