@@ -79,8 +79,8 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             val branchName = pushEvent.ref.removePrefix("refs/heads/")
             val repoName = pushEvent.repository.fullName
 
-            if (branchName != "main" && branchName != "master") {
-                logger.info("Skipping push event for branch: $branchName (not main or master)")
+            if (!supported_branches.contains(branchName)) {
+                logger.info("Skipping push event for branch: $branchName (not $supported_branches")
                 return
             }
 
@@ -174,8 +174,8 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
             val branchName = workflowRun.headBranch
 
-            if (branchName != "main" && branchName != "master") {
-                logger.info("Skipping workflow run event for branch: $branchName (not main or master)")
+            if (!supported_branches.contains(branchName)) {
+                logger.info("Skipping workflow run event for branch: $branchName (not in $supported_branches)")
                 return
             }
 
@@ -185,13 +185,14 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                 val actorName = workflowRun.actor.login
                 val shortSha = workflowRun.headSha.take(7)
                 val repoName = repository.fullName
+                val workflowName = workflowRun.name.split("[\n\r]".toRegex()).first()
 
                 if (workflowRun.conclusion == "failure") {
                     val again = if (recentlyFailedBuilds.contains(workflowKey)) " again" else ""
                     recentlyFailedBuilds[workflowKey] = Instant.now()
 
                     val message = SlackMessage(
-                        text = ":x: build failed$again: <${workflowRun.htmlUrl}|${workflowRun.name} #${workflowRun.runNumber}> " +
+                        text = ":x: build failed$again: <${workflowRun.htmlUrl}|$workflowName #${workflowRun.runNumber}> " +
                                 "in <${repository.htmlUrl}|$repoName> " +
                                 "(<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
                         channel = channel,
@@ -208,7 +209,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
                         if (timeSinceFailure <= failureTrackingDuration) {
                             val message = SlackMessage(
-                                text = ":white_check_mark: build fixed: <${workflowRun.htmlUrl}|${workflowRun.name} #${workflowRun.runNumber}> " +
+                                text = ":white_check_mark: build fixed: <${workflowRun.htmlUrl}|$workflowName #${workflowRun.runNumber}> " +
                                         "in <${repository.htmlUrl}|$repoName> " +
                                         "(<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
                                 channel = channel,
@@ -244,5 +245,9 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
         keysToRemove.forEach { key ->
             recentlyFailedBuilds.remove(key)
         }
+    }
+
+    companion object {
+        val supported_branches = listOf("master", "main", "prod")
     }
 }
