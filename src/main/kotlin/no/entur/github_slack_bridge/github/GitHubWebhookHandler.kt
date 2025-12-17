@@ -188,19 +188,26 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                 val workflowName = workflowRun.name.split("[\n\r]".toRegex()).first()
 
                 if (workflowRun.conclusion == "failure") {
-                    val again = if (recentlyFailedBuilds.contains(workflowKey)) " again" else ""
-                    recentlyFailedBuilds[workflowKey] = Instant.now()
+                    val buildCreatedAt = Instant.parse(workflowRun.createdAt)
+                    val buildAge = Duration.between(buildCreatedAt, Instant.now())
 
-                    val message = SlackMessage(
-                        text = ":x: build failed$again: <${workflowRun.htmlUrl}|$workflowName #${workflowRun.runNumber}> " +
-                                "in <${repository.htmlUrl}|$repoName> " +
-                                "on `$branchName` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
-                        channel = channel,
-                        username = actorName,
-                    )
+                    if (buildAge > Duration.ofDays(28)) {
+                        logger.info("Ignoring failure for old build (${buildAge.toDays()} days old): ${workflowRun.name} #${workflowRun.runNumber}")
+                    } else {
+                        val again = if (recentlyFailedBuilds.contains(workflowKey)) " again" else ""
+                        recentlyFailedBuilds[workflowKey] = Instant.now()
 
-                    slackClient.sendMessage(message)
-                    logger.info("Sent notification for failed build: ${workflowRun.name} #${workflowRun.runNumber}")
+                        val message = SlackMessage(
+                            text = ":x: build failed$again: <${workflowRun.htmlUrl}|$workflowName #${workflowRun.runNumber}> " +
+                                    "in <${repository.htmlUrl}|$repoName> " +
+                                    "on `$branchName` (<${repository.htmlUrl}/commit/${workflowRun.headSha}|${shortSha}>)",
+                            channel = channel,
+                            username = actorName,
+                        )
+
+                        slackClient.sendMessage(message)
+                        logger.info("Sent notification for failed build: ${workflowRun.name} #${workflowRun.runNumber}")
+                    }
                 } else if (workflowRun.conclusion == "success") {
                     val lastFailureTime = recentlyFailedBuilds.remove(workflowKey)
 

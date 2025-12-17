@@ -3,6 +3,8 @@ package no.entur.github_slack_bridge.github
 import kotlinx.coroutines.runBlocking
 import no.entur.github_slack_bridge.slack.SlackClient
 import no.entur.github_slack_bridge.slack.SlackMessage
+import java.time.Instant
+import java.time.temporal.ChronoUnit
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import kotlin.test.Test
@@ -305,47 +307,7 @@ class GitHubWebhookHandlerTest {
 
     @Test
     fun `test handling workflow run failure event`() = runBlocking {
-        val workflowRunEventPayload = """
-        {
-          "action": "completed",
-          "workflow_run": {
-            "id": 987654321,
-            "name": "CI Build",
-            "status": "completed",
-            "conclusion": "failure",
-            "html_url": "https://github.com/user/test-repo/actions/runs/987654321",
-            "created_at": "2025-06-05T12:00:00Z",
-            "updated_at": "2025-06-05T12:15:00Z",
-            "workflow_id": 123456,
-            "head_branch": "main",
-            "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
-            "check_suite_id": 123456789,
-            "actor": {
-              "login": "testuser",
-              "id": 12345,
-              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-            },
-            "run_number": 42
-          },
-          "repository": {
-            "id": 123456789,
-            "name": "test-repo",
-            "full_name": "user/test-repo",
-            "html_url": "https://github.com/user/test-repo",
-            "url": "https://api.github.com/repos/user/test-repo",
-            "owner": {
-              "login": "user",
-              "id": 12345,
-              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-            }
-          },
-          "sender": {
-            "login": "testuser",
-            "id": 12345,
-            "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-          }
-        }
-        """.trimIndent()
+        val workflowRunEventPayload = createWorkflowRunPayload(conclusion = "failure")
 
         val signature = generateSignature(workflowRunEventPayload, testSecret)
         val mockSlackClient = MockSlackClient()
@@ -366,47 +328,7 @@ class GitHubWebhookHandlerTest {
 
     @Test
     fun `test ignoring successful workflow run event`() = runBlocking {
-        val workflowRunEventPayload = """
-        {
-          "action": "completed",
-          "workflow_run": {
-            "id": 987654321,
-            "name": "CI Build",
-            "status": "completed",
-            "conclusion": "success",
-            "html_url": "https://github.com/user/test-repo/actions/runs/987654321",
-            "created_at": "2025-06-05T12:00:00Z",
-            "updated_at": "2025-06-05T12:15:00Z",
-            "workflow_id": 123456,
-            "head_branch": "main",
-            "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
-            "check_suite_id": 123456789,
-            "actor": {
-              "login": "testuser",
-              "id": 12345,
-              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-            },
-            "run_number": 42
-          },
-          "repository": {
-            "id": 123456789,
-            "name": "test-repo",
-            "full_name": "user/test-repo",
-            "html_url": "https://github.com/user/test-repo",
-            "url": "https://api.github.com/repos/user/test-repo",
-            "owner": {
-              "login": "user",
-              "id": 12345,
-              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-            }
-          },
-          "sender": {
-            "login": "testuser",
-            "id": 12345,
-            "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-          }
-        }
-        """.trimIndent()
+        val workflowRunEventPayload = createWorkflowRunPayload(conclusion = "success")
 
         val signature = generateSignature(workflowRunEventPayload, testSecret)
         val mockSlackClient = MockSlackClient()
@@ -419,89 +341,13 @@ class GitHubWebhookHandlerTest {
 
     @Test
     fun `test successful workflow run after failure sends notification`() = runBlocking {
-        val failedWorkflowRunPayload = """
-        {
-          "action": "completed",
-          "workflow_run": {
-            "id": 987654321,
-            "name": "CI Build",
-            "status": "completed",
-            "conclusion": "failure",
-            "html_url": "https://github.com/user/test-repo/actions/runs/987654321",
-            "created_at": "2025-06-05T12:00:00Z",
-            "updated_at": "2025-06-05T12:15:00Z",
-            "workflow_id": 123456,
-            "head_branch": "main",
-            "head_sha": "abcdef1234567890abcdef1234567890abcdef12",
-            "check_suite_id": 123456789,
-            "actor": {
-              "login": "testuser",
-              "id": 12345,
-              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-            },
-            "run_number": 42
-          },
-          "repository": {
-            "id": 123456789,
-            "name": "test-repo",
-            "full_name": "user/test-repo",
-            "html_url": "https://github.com/user/test-repo",
-            "url": "https://api.github.com/repos/user/test-repo",
-            "owner": {
-              "login": "user",
-              "id": 12345,
-              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-            }
-          },
-          "sender": {
-            "login": "testuser",
-            "id": 12345,
-            "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-          }
-        }
-        """.trimIndent()
-
-        val successWorkflowRunPayload = """
-        {
-          "action": "completed",
-          "workflow_run": {
-            "id": 987654322,
-            "name": "CI Build",
-            "status": "completed",
-            "conclusion": "success",
-            "html_url": "https://github.com/user/test-repo/actions/runs/987654322",
-            "created_at": "2025-06-05T13:00:00Z",
-            "updated_at": "2025-06-05T13:15:00Z",
-            "workflow_id": 123456,
-            "head_branch": "main",
-            "head_sha": "bcdef1234567890abcdef1234567890abcdef123",
-            "check_suite_id": 123456790,
-            "actor": {
-              "login": "testuser",
-              "id": 12345,
-              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-            },
-            "run_number": 43
-          },
-          "repository": {
-            "id": 123456789,
-            "name": "test-repo",
-            "full_name": "user/test-repo",
-            "html_url": "https://github.com/user/test-repo",
-            "url": "https://api.github.com/repos/user/test-repo",
-            "owner": {
-              "login": "user",
-              "id": 12345,
-              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-            }
-          },
-          "sender": {
-            "login": "testuser",
-            "id": 12345,
-            "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
-          }
-        }
-        """.trimIndent()
+        val failedWorkflowRunPayload = createWorkflowRunPayload(conclusion = "failure")
+        val successWorkflowRunPayload = createWorkflowRunPayload(
+            conclusion = "success",
+            id = 987654322,
+            runNumber = 43,
+            headSha = "bcdef1234567890abcdef1234567890abcdef123"
+        )
 
         val failureSignature = generateSignature(failedWorkflowRunPayload, testSecret)
         val successSignature = generateSignature(successWorkflowRunPayload, testSecret)
@@ -532,27 +378,76 @@ class GitHubWebhookHandlerTest {
 
     @Test
     fun `test successful workflow run without previous failure doesn't send notification`() = runBlocking {
-        val successWorkflowRunPayload = """
+        val successWorkflowRunPayload = createWorkflowRunPayload(conclusion = "success")
+
+        val signature = generateSignature(successWorkflowRunPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        // Send only a successful build notification with no previous failure
+        webhookHandler.handleWebhook("workflow_run", successWorkflowRunPayload, "sha256=$signature", "builds-channel")
+
+        // Verify that no messages were sent for successful workflow runs without previous failures
+        assertEquals(0, mockSlackClient.sentMessages.size)
+    }
+
+    @Test
+    fun `test old build failures are ignored`() = runBlocking {
+        val oldBuildPayload = createWorkflowRunPayload(
+            conclusion = "failure",
+            createdAt = Instant.now().minus(30, ChronoUnit.DAYS)
+        )
+
+        val signature = generateSignature(oldBuildPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", oldBuildPayload, "sha256=$signature", "builds-channel")
+
+        // Verify that no messages were sent for old build failures
+        assertEquals(0, mockSlackClient.sentMessages.size)
+    }
+
+    private fun generateSignature(payload: String, secret: String): String {
+        val secretKeySpec = SecretKeySpec(secret.toByteArray(), "HmacSHA256")
+        val mac = Mac.getInstance("HmacSHA256")
+        mac.init(secretKeySpec)
+        val calculatedDigest = mac.doFinal(payload.toByteArray())
+
+        return calculatedDigest.joinToString("") {
+            String.format("%02x", it)
+        }
+    }
+
+    private fun createWorkflowRunPayload(
+        conclusion: String,
+        id: Long = 987654321,
+        runNumber: Int = 42,
+        headSha: String = "abcdef1234567890abcdef1234567890abcdef12",
+        createdAt: Instant = Instant.now()
+    ): String {
+        val updatedAt = createdAt.plus(15, ChronoUnit.MINUTES)
+        return """
         {
           "action": "completed",
           "workflow_run": {
-            "id": 987654322,
+            "id": $id,
             "name": "CI Build",
             "status": "completed",
-            "conclusion": "success",
-            "html_url": "https://github.com/user/test-repo/actions/runs/987654322",
-            "created_at": "2025-06-05T13:00:00Z",
-            "updated_at": "2025-06-05T13:15:00Z",
+            "conclusion": "$conclusion",
+            "html_url": "https://github.com/user/test-repo/actions/runs/$id",
+            "created_at": "$createdAt",
+            "updated_at": "$updatedAt",
             "workflow_id": 123456,
             "head_branch": "main",
-            "head_sha": "bcdef1234567890abcdef1234567890abcdef123",
-            "check_suite_id": 123456790,
+            "head_sha": "$headSha",
+            "check_suite_id": 123456789,
             "actor": {
               "login": "testuser",
               "id": 12345,
               "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
             },
-            "run_number": 43
+            "run_number": $runNumber
           },
           "repository": {
             "id": 123456789,
@@ -573,28 +468,8 @@ class GitHubWebhookHandlerTest {
           }
         }
         """.trimIndent()
-
-        val signature = generateSignature(successWorkflowRunPayload, testSecret)
-        val mockSlackClient = MockSlackClient()
-        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
-
-        // Send only a successful build notification with no previous failure
-        webhookHandler.handleWebhook("workflow_run", successWorkflowRunPayload, "sha256=$signature", "builds-channel")
-
-        // Verify that no messages were sent for successful workflow runs without previous failures
-        assertEquals(0, mockSlackClient.sentMessages.size)
     }
 
-    private fun generateSignature(payload: String, secret: String): String {
-        val secretKeySpec = SecretKeySpec(secret.toByteArray(), "HmacSHA256")
-        val mac = Mac.getInstance("HmacSHA256")
-        mac.init(secretKeySpec)
-        val calculatedDigest = mac.doFinal(payload.toByteArray())
-
-        return calculatedDigest.joinToString("") {
-            String.format("%02x", it)
-        }
-    }
 
     private class MockSlackClient : SlackClient("https://dummy-url") {
         val sentMessages = mutableListOf<SlackMessage>()
@@ -632,7 +507,7 @@ class GitHubWebhookHandlerTest {
                     handledEventType = eventType
                     lastChannel = channel
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 webhookProcessed = false
             }
         }
