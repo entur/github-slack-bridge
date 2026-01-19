@@ -51,6 +51,10 @@ fun Application.configureServer(githubWebhookHandler: GitHubWebhookHandler) {
             call.respondText("""{"status":"UP"}""", contentType = ContentType.Application.Json)
         }
 
+        get("/builds") {
+            call.respond(githubWebhookHandler.getBuildStatus())
+        }
+
         post("/webhook/{channel}") {
             val channel = call.parameters["channel"]
             val payload = call.receiveText()

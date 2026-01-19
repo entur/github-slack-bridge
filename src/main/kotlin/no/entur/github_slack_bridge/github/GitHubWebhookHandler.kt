@@ -5,6 +5,7 @@ import no.entur.github_slack_bridge.slack.SlackClient
 import no.entur.github_slack_bridge.slack.SlackMessage
 import org.slf4j.LoggerFactory
 import java.security.MessageDigest
+import kotlinx.serialization.Serializable
 import java.time.Duration
 import java.time.Instant
 import java.util.concurrent.ConcurrentHashMap
@@ -254,7 +255,65 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
         }
     }
 
+    fun getBuildStatus(): BuildStatus {
+        cleanupOldFailedBuilds()
+        val now = Instant.now()
+
+        val failedBuilds = recentlyFailedBuilds.map { (key, failureTime) ->
+            val (workflowId, branch) = key.split(":", limit = 2)
+            val duration = Duration.between(failureTime, now)
+            FailedBuild(
+                workflowId = workflowId,
+                branch = branch,
+                failedAt = failureTime.toString(),
+                failedFor = formatDuration(duration)
+            )
+        }.sortedByDescending { it.failedAt }
+
+        return BuildStatus(
+            failedBuilds = failedBuilds,
+            stats = BuildStats(
+                totalFailedBuilds = failedBuilds.size,
+                failedByBranch = failedBuilds.groupingBy { it.branch }.eachCount(),
+                trackingDurationDays = failureTrackingDuration.toDays()
+            )
+        )
+    }
+
+    private fun formatDuration(duration: Duration): String {
+        val days = duration.toDays()
+        val hours = duration.toHours() % 24
+        val minutes = duration.toMinutes() % 60
+
+        return when {
+            days > 0 -> "${days}d ${hours}h"
+            hours > 0 -> "${hours}h ${minutes}m"
+            else -> "${minutes}m"
+        }
+    }
+
     companion object {
         val supported_branches = listOf("master", "main", "prod")
     }
 }
+
+@Serializable
+data class BuildStatus(
+    val failedBuilds: List<FailedBuild>,
+    val stats: BuildStats
+)
+
+@Serializable
+data class FailedBuild(
+    val workflowId: String,
+    val branch: String,
+    val failedAt: String,
+    val failedFor: String
+)
+
+@Serializable
+data class BuildStats(
+    val totalFailedBuilds: Int,
+    val failedByBranch: Map<String, Int>,
+    val trackingDurationDays: Long
+)
