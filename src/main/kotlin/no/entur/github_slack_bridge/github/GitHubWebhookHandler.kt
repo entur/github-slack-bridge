@@ -255,7 +255,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
         }
     }
 
-    fun getBuildStatus(): BuildStatus {
+    open fun getBuildStatus(): BuildStatus {
         cleanupOldFailedBuilds()
         val now = Instant.now()
 

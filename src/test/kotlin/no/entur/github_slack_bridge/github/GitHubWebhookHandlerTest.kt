@@ -392,6 +392,115 @@ class GitHubWebhookHandlerTest {
     }
 
     @Test
+    fun `test getBuildStatus returns empty when no failures`() = runBlocking {
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        val buildStatus = webhookHandler.getBuildStatus()
+
+        assertEquals(0, buildStatus.failedBuilds.size)
+        assertEquals(0, buildStatus.stats.totalFailedBuilds)
+        assertTrue(buildStatus.stats.failedByBranch.isEmpty())
+        assertEquals(7, buildStatus.stats.trackingDurationDays)
+    }
+
+    @Test
+    fun `test getBuildStatus returns failed builds after failure`() = runBlocking {
+        val workflowRunPayload = createWorkflowRunPayload(conclusion = "failure")
+        val signature = generateSignature(workflowRunPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", workflowRunPayload, "sha256=$signature", "builds-channel")
+
+        val buildStatus = webhookHandler.getBuildStatus()
+
+        assertEquals(1, buildStatus.failedBuilds.size)
+        assertEquals(1, buildStatus.stats.totalFailedBuilds)
+        assertEquals("123456", buildStatus.failedBuilds[0].workflowId)
+        assertEquals("main", buildStatus.failedBuilds[0].branch)
+        assertEquals(mapOf("main" to 1), buildStatus.stats.failedByBranch)
+    }
+
+    @Test
+    fun `test getBuildStatus removes fixed builds`() = runBlocking {
+        val failedPayload = createWorkflowRunPayload(conclusion = "failure")
+        val successPayload = createWorkflowRunPayload(
+            conclusion = "success",
+            id = 987654322,
+            runNumber = 43,
+            headSha = "bcdef1234567890abcdef1234567890abcdef123"
+        )
+
+        val failureSignature = generateSignature(failedPayload, testSecret)
+        val successSignature = generateSignature(successPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", failedPayload, "sha256=$failureSignature", "builds-channel")
+
+        var buildStatus = webhookHandler.getBuildStatus()
+        assertEquals(1, buildStatus.failedBuilds.size)
+
+        webhookHandler.handleWebhook("workflow_run", successPayload, "sha256=$successSignature", "builds-channel")
+
+        buildStatus = webhookHandler.getBuildStatus()
+        assertEquals(0, buildStatus.failedBuilds.size)
+        assertEquals(0, buildStatus.stats.totalFailedBuilds)
+    }
+
+    @Test
+    fun `test getBuildStatus tracks multiple workflows separately`() = runBlocking {
+        val workflow1Payload = createWorkflowRunPayload(conclusion = "failure", workflowId = 111111)
+        val workflow2Payload = createWorkflowRunPayload(
+            conclusion = "failure",
+            workflowId = 222222,
+            id = 987654322,
+            runNumber = 43
+        )
+        val workflow3ProdPayload = createWorkflowRunPayload(
+            conclusion = "failure",
+            workflowId = 333333,
+            id = 987654323,
+            runNumber = 44,
+            headBranch = "prod"
+        )
+
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook(
+            "workflow_run",
+            workflow1Payload,
+            "sha256=${generateSignature(workflow1Payload, testSecret)}",
+            "builds-channel"
+        )
+        webhookHandler.handleWebhook(
+            "workflow_run",
+            workflow2Payload,
+            "sha256=${generateSignature(workflow2Payload, testSecret)}",
+            "builds-channel"
+        )
+        webhookHandler.handleWebhook(
+            "workflow_run",
+            workflow3ProdPayload,
+            "sha256=${generateSignature(workflow3ProdPayload, testSecret)}",
+            "builds-channel"
+        )
+
+        val buildStatus = webhookHandler.getBuildStatus()
+
+        assertEquals(3, buildStatus.failedBuilds.size)
+        assertEquals(3, buildStatus.stats.totalFailedBuilds)
+        assertEquals(mapOf("main" to 2, "prod" to 1), buildStatus.stats.failedByBranch)
+
+        val workflowIds = buildStatus.failedBuilds.map { it.workflowId }.toSet()
+        assertTrue(workflowIds.contains("111111"))
+        assertTrue(workflowIds.contains("222222"))
+        assertTrue(workflowIds.contains("333333"))
+    }
+
+    @Test
     fun `test old build failures are ignored`() = runBlocking {
         val oldBuildPayload = createWorkflowRunPayload(
             conclusion = "failure",
@@ -424,7 +533,9 @@ class GitHubWebhookHandlerTest {
         id: Long = 987654321,
         runNumber: Int = 42,
         headSha: String = "abcdef1234567890abcdef1234567890abcdef12",
-        createdAt: Instant = Instant.now()
+        createdAt: Instant = Instant.now(),
+        workflowId: Long = 123456,
+        headBranch: String = "main"
     ): String {
         val updatedAt = createdAt.plus(15, ChronoUnit.MINUTES)
         return """
@@ -438,8 +549,8 @@ class GitHubWebhookHandlerTest {
             "html_url": "https://github.com/user/test-repo/actions/runs/$id",
             "created_at": "$createdAt",
             "updated_at": "$updatedAt",
-            "workflow_id": 123456,
-            "head_branch": "main",
+            "workflow_id": $workflowId,
+            "head_branch": "$headBranch",
             "head_sha": "$headSha",
             "check_suite_id": 123456789,
             "actor": {
