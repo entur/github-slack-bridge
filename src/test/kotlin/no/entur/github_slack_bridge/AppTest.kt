@@ -83,13 +83,19 @@ class AppTest {
                         workflowId = "123456",
                         branch = "main",
                         failedAt = "2026-01-19T10:00:00Z",
-                        failedFor = "2h 30m"
+                        failedFor = "2h 30m",
+                        name = "CI Build",
+                        htmlUrl = "https://github.com/user/test-repo/actions/runs/123456",
+                        repoFullName = "user/test-repo"
                     ),
                     FailedBuild(
                         workflowId = "789012",
                         branch = "prod",
                         failedAt = "2026-01-18T15:00:00Z",
-                        failedFor = "1d 5h"
+                        failedFor = "1d 5h",
+                        name = "Deploy",
+                        htmlUrl = "https://github.com/user/test-repo/actions/runs/789012",
+                        repoFullName = "user/test-repo"
                     )
                 ),
                 stats = BuildStats(

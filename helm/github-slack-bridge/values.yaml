@@ -15,7 +15,7 @@ common:
     cpu: 0.3 # Adjust this to your application needs
     memory: 512 # Adjust this to your application needs, a java application might need more memory to start like 1024 or 2048 or +++
   postgres: # sets up a postgres proxy so you can connect to your postgresql instance via localhost on the pod
-    enabled: false
+    enabled: true
     cpu: 0.1  # PostgreSQL Proxy setting, this usually is enough for most applications
     memory: 32  # PostgreSQL Proxy setting, this usually is enough for most applications
   secrets:

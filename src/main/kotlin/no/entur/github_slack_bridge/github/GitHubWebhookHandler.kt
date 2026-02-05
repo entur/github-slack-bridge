@@ -17,7 +17,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
     private val json = Json { ignoreUnknownKeys = true }
 
     // Consider persisting this:
-    private val recentlyFailedBuilds = ConcurrentHashMap<String, Instant>()
+    private val recentlyFailedBuilds = ConcurrentHashMap<String, FailedBuildInfo>()
     private val failureTrackingDuration = Duration.ofDays(7)
 
     open suspend fun handleWebhook(
@@ -196,7 +196,12 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                         logger.info("Ignoring failure for old build (${buildAge.toDays()} days old): ${workflowRun.name} #${workflowRun.runNumber}")
                     } else {
                         val again = if (recentlyFailedBuilds.contains(workflowKey)) " again" else ""
-                        recentlyFailedBuilds[workflowKey] = Instant.now()
+                        recentlyFailedBuilds[workflowKey] = FailedBuildInfo(
+                            workflowName = workflowName,
+                            htmlUrl = workflowRun.htmlUrl,
+                            repoFullName = repoName,
+                            failedAt = Instant.now()
+                        )
 
                         val message = SlackMessage(
                             text = ":x: build failed$again: <${workflowRun.htmlUrl}|$workflowName #${workflowRun.runNumber}> " +
@@ -210,10 +215,10 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                         logger.info("Sent notification for failed build: ${workflowRun.name} #${workflowRun.runNumber}")
                     }
                 } else if (workflowRun.conclusion == "success") {
-                    val lastFailureTime = recentlyFailedBuilds.remove(workflowKey)
+                    val lastFailureInfo = recentlyFailedBuilds.remove(workflowKey)
 
-                    if (lastFailureTime != null) {
-                        val timeSinceFailure = Duration.between(lastFailureTime, Instant.now())
+                    if (lastFailureInfo != null) {
+                        val timeSinceFailure = Duration.between(lastFailureInfo.failedAt, Instant.now())
 
                         if (timeSinceFailure <= failureTrackingDuration) {
                             val message = SlackMessage(
@@ -245,8 +250,8 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
     private fun cleanupOldFailedBuilds() {
         val now = Instant.now()
         val keysToRemove = recentlyFailedBuilds.entries
-            .filter { (_, failureTime) ->
-                Duration.between(failureTime, now) > failureTrackingDuration
+            .filter { (_, info) ->
+                Duration.between(info.failedAt, now) > failureTrackingDuration
             }
             .map { it.key }
 
@@ -259,14 +264,17 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
         cleanupOldFailedBuilds()
         val now = Instant.now()
 
-        val failedBuilds = recentlyFailedBuilds.map { (key, failureTime) ->
+        val failedBuilds = recentlyFailedBuilds.map { (key, info) ->
             val (workflowId, branch) = key.split(":", limit = 2)
-            val duration = Duration.between(failureTime, now)
+            val duration = Duration.between(info.failedAt, now)
             FailedBuild(
                 workflowId = workflowId,
                 branch = branch,
-                failedAt = failureTime.toString(),
-                failedFor = formatDuration(duration)
+                failedAt = info.failedAt.toString(),
+                failedFor = formatDuration(duration),
+                name = info.workflowName,
+                htmlUrl = info.htmlUrl,
+                repoFullName = info.repoFullName
             )
         }.sortedByDescending { it.failedAt }
 
@@ -308,7 +316,17 @@ data class FailedBuild(
     val workflowId: String,
     val branch: String,
     val failedAt: String,
-    val failedFor: String
+    val failedFor: String,
+    val name: String,
+    val htmlUrl: String,
+    val repoFullName: String
+)
+
+data class FailedBuildInfo(
+    val workflowName: String,
+    val htmlUrl: String,
+    val repoFullName: String,
+    val failedAt: Instant
 )
 
 @Serializable

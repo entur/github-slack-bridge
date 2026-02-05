@@ -319,8 +319,11 @@
                         <div class="build-item">
                             <div class="build-icon">&#10060;</div>
                             <div class="build-details">
-                                <div class="build-workflow">Workflow ${build.workflowId}</div>
+                                <div class="build-workflow">
+                                    <a href="${build.htmlUrl}" target="_blank">${build.name}</a>
+                                </div>
                                 <div class="build-meta">
+                                    ${build.repoFullName} &middot;
                                     <span class="branch-tag">${build.branch}</span>
                                     &nbsp;failed at ${failedDate}
                                 </div>
