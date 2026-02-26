@@ -132,6 +132,17 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             }
 
             val isMerged = pullRequest.merged == true
+
+            if (action == "closed" && !isMerged) {
+                logger.info("Ignoring closed (not merged) PR #${pullRequest.number}")
+                return
+            }
+
+            if (action == "reopened") {
+                logger.info("Ignoring reopened PR #${pullRequest.number}")
+                return
+            }
+
             val emoji = getPullRequestEmoji(action, isMerged)
             val actionText = getPullRequestActionText(action, isMerged)
 

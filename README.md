@@ -50,7 +50,7 @@ This service requires the following environment variables (for EnTur, these are 
 ### Supported GitHub Events
 
 - Push events (to main/master/prod branches)
-- Pull request events (opened, closed, reopened)
+- Pull request events (opened, merged)
 - Workflow run events (failed builds and fixed builds)
 
 ### Requirements

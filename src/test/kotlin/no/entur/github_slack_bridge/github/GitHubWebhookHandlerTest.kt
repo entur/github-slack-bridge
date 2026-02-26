@@ -139,6 +139,162 @@ class GitHubWebhookHandlerTest {
     }
 
     @Test
+    fun `test handling pull request merged event`() = runBlocking {
+        val prEventPayload = """
+        {
+          "action": "closed",
+          "pull_request": {
+            "id": 123456789,
+            "number": 42,
+            "title": "Add new feature",
+            "html_url": "https://github.com/user/test-repo/pull/42",
+            "url": "https://api.github.com/repos/user/test-repo/pulls/42",
+            "state": "closed",
+            "merged": true,
+            "body": "This PR adds a new awesome feature",
+            "created_at": "2025-06-05T12:00:00Z",
+            "updated_at": "2025-06-05T12:00:00Z",
+            "user": {
+              "login": "contributor",
+              "id": 54321,
+              "avatar_url": "https://avatars.githubusercontent.com/u/54321?v=4"
+            }
+          },
+          "repository": {
+            "id": 123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            "owner": {
+              "login": "user",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            }
+          },
+          "sender": {
+            "login": "contributor",
+            "id": 54321,
+            "avatar_url": "https://avatars.githubusercontent.com/u/54321?v=4"
+          }
+        }
+        """.trimIndent()
+
+        val signature = generateSignature(prEventPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("pull_request", prEventPayload, "sha256=$signature", "pull-requests")
+
+        assertEquals(1, mockSlackClient.sentMessages.size)
+        val message = mockSlackClient.sentMessages.first()
+
+        assertTrue(message.text.contains(":pr-merged: Pull Request merged:"))
+        assertTrue(message.text.contains("#42 Add new feature"))
+    }
+
+    @Test
+    fun `test ignoring closed (not merged) pull request event`() = runBlocking {
+        val prEventPayload = """
+        {
+          "action": "closed",
+          "pull_request": {
+            "id": 123456789,
+            "number": 42,
+            "title": "Add new feature",
+            "html_url": "https://github.com/user/test-repo/pull/42",
+            "url": "https://api.github.com/repos/user/test-repo/pulls/42",
+            "state": "closed",
+            "merged": false,
+            "body": "This PR adds a new awesome feature",
+            "created_at": "2025-06-05T12:00:00Z",
+            "updated_at": "2025-06-05T12:00:00Z",
+            "user": {
+              "login": "contributor",
+              "id": 54321,
+              "avatar_url": "https://avatars.githubusercontent.com/u/54321?v=4"
+            }
+          },
+          "repository": {
+            "id": 123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            "owner": {
+              "login": "user",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            }
+          },
+          "sender": {
+            "login": "contributor",
+            "id": 54321,
+            "avatar_url": "https://avatars.githubusercontent.com/u/54321?v=4"
+          }
+        }
+        """.trimIndent()
+
+        val signature = generateSignature(prEventPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("pull_request", prEventPayload, "sha256=$signature", "pull-requests")
+
+        assertEquals(0, mockSlackClient.sentMessages.size)
+    }
+
+    @Test
+    fun `test ignoring reopened pull request event`() = runBlocking {
+        val prEventPayload = """
+        {
+          "action": "reopened",
+          "pull_request": {
+            "id": 123456789,
+            "number": 42,
+            "title": "Add new feature",
+            "html_url": "https://github.com/user/test-repo/pull/42",
+            "url": "https://api.github.com/repos/user/test-repo/pulls/42",
+            "state": "open",
+            "body": "This PR adds a new awesome feature",
+            "created_at": "2025-06-05T12:00:00Z",
+            "updated_at": "2025-06-05T12:00:00Z",
+            "user": {
+              "login": "contributor",
+              "id": 54321,
+              "avatar_url": "https://avatars.githubusercontent.com/u/54321?v=4"
+            }
+          },
+          "repository": {
+            "id": 123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            "owner": {
+              "login": "user",
+              "id": 12345,
+              "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
+            }
+          },
+          "sender": {
+            "login": "contributor",
+            "id": 54321,
+            "avatar_url": "https://avatars.githubusercontent.com/u/54321?v=4"
+          }
+        }
+        """.trimIndent()
+
+        val signature = generateSignature(prEventPayload, testSecret)
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("pull_request", prEventPayload, "sha256=$signature", "pull-requests")
+
+        assertEquals(0, mockSlackClient.sentMessages.size)
+    }
+
+    @Test
     fun `test ignoring unsupported event type`() = runBlocking {
         val payload = "{}"
         val signature = generateSignature(payload, testSecret)
