@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.3.0"
+    kotlin("jvm") version "2.3.20"
     application
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.3.0"
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.3.20"
     alias(libs.plugins.shadow)
     alias(libs.plugins.versions)
 }
@@ -60,6 +60,10 @@ fun isNonStable(version: String): Boolean {
 }
 
 tasks.dependencyUpdates {
+    doFirst {
+        // https://github.com/ben-manes/gradle-versions-plugin/issues/968
+        gradle.startParameter.isParallelProjectExecutionEnabled = false
+    }
     rejectVersionIf {
         isNonStable(candidate.version) && !isNonStable(currentVersion)
     }

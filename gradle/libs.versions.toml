@@ -1,8 +1,8 @@
 [versions]
-kotlin = "2.3.0"
-ktor = "3.3.3"
-kotlinxSerialization = "1.9.0"
-logback = "1.5.22"
+kotlin = "2.3.20"
+ktor = "3.4.2"
+kotlinxSerialization = "1.11.0"
+logback = "1.5.32"
 coroutines = "1.10.2"
 ben-manes-versions = "0.53.0"
 
@@ -22,5 +22,5 @@ kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotl
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 
 [plugins]
-shadow = { id = "com.gradleup.shadow", version = "9.3.0" }
+shadow = { id = "com.gradleup.shadow", version = "9.4.1" }
 versions = { id = "com.github.ben-manes.versions", version.ref = "ben-manes-versions" }
