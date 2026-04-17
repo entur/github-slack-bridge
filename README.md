@@ -47,6 +47,11 @@ This service requires the following environment variables (for EnTur, these are 
   - Example: `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX`
 - `GITHUB_WEBHOOK_SECRET` - **Required**. The secret used to validate GitHub webhook payloads.
 
+Update secret (Entur):
+```
+echo -n 'some new secret' | gcloud secrets versions add GITHUB_WEBHOOK_SECRET --data-file=- --project=ent-gthbslckbr-dev
+```
+
 ### Supported GitHub Events
 
 - Push events (to main/master/prod branches)
