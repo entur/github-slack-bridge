@@ -27,7 +27,7 @@ data class GitHubPushEvent(
 
     @Serializable
     data class Repository(
-        val id: Int = 0,
+        val id: Long = 0,
         val name: String = "",
         @SerialName("full_name") val fullName: String,
         val description: String? = null,
@@ -42,14 +42,14 @@ data class GitHubPushEvent(
         val name: String? = null,
         val email: String? = null,
         val login: String,
-        val id: Int,
+        val id: Long,
         @SerialName("avatar_url") val avatarUrl: String? = null
     )
 
     @Serializable
     data class Sender(
         val login: String,
-        val id: Int = 0,
+        val id: Long = 0,
         @SerialName("avatar_url") val avatarUrl: String? = null
     )
 }
@@ -92,7 +92,7 @@ data class GitHubPullRequestEvent(
     data class PullRequest(
         val url: String,
         @SerialName("html_url") val htmlUrl: String,
-        val id: Int,
+        val id: Long,
         val number: Int,
         val title: String,
         val state: String,
@@ -108,7 +108,7 @@ data class GitHubPullRequestEvent(
     @Serializable
     data class User(
         val login: String,
-        val id: Int,
+        val id: Long,
         @SerialName("avatar_url") val avatarUrl: String? = null
     )
 }

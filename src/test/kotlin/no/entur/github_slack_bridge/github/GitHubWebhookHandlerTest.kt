@@ -728,6 +728,85 @@ class GitHubWebhookHandlerTest {
         assertEquals(0, mockSlackClient.sentMessages.size)
     }
 
+    @Test
+    fun `test repeated failure of the same workflow reports failed again`() = runBlocking {
+        val firstFailure = createWorkflowRunPayload(conclusion = "failure")
+        val secondFailure = createWorkflowRunPayload(conclusion = "failure", id = 987654399, runNumber = 43)
+
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook(
+            "workflow_run",
+            firstFailure,
+            "sha256=${generateSignature(firstFailure, testSecret)}",
+            "builds-channel"
+        )
+        webhookHandler.handleWebhook(
+            "workflow_run",
+            secondFailure,
+            "sha256=${generateSignature(secondFailure, testSecret)}",
+            "builds-channel"
+        )
+
+        assertEquals(2, mockSlackClient.sentMessages.size)
+        assertTrue(mockSlackClient.sentMessages[0].text.contains(":x: build failed:"))
+        assertTrue(mockSlackClient.sentMessages[1].text.contains(":x: build failed again:"))
+    }
+
+    @Test
+    fun `test pull request with id beyond Int range is handled`() = runBlocking {
+        // Real GitHub pull request ids exceed 2^31, which used to fail deserialization
+        val prEventPayload = """
+        {
+          "action": "opened",
+          "pull_request": {
+            "id": 4458676007,
+            "number": 464,
+            "title": "Add new feature",
+            "html_url": "https://github.com/user/test-repo/pull/464",
+            "url": "https://api.github.com/repos/user/test-repo/pulls/464",
+            "state": "open",
+            "created_at": "2026-09-05T12:00:00Z",
+            "updated_at": "2026-09-05T12:00:00Z",
+            "user": {
+              "login": "contributor",
+              "id": 9876543210
+            }
+          },
+          "repository": {
+            "id": 8123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            "default_branch": "main",
+            "owner": {
+              "login": "user",
+              "id": 9876543210
+            }
+          },
+          "sender": {
+            "login": "contributor",
+            "id": 9876543210
+          }
+        }
+        """.trimIndent()
+
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook(
+            "pull_request",
+            prEventPayload,
+            "sha256=${generateSignature(prEventPayload, testSecret)}",
+            "pull-requests"
+        )
+
+        assertEquals(1, mockSlackClient.sentMessages.size)
+        assertTrue(mockSlackClient.sentMessages.first().text.contains("#464 Add new feature"))
+    }
+
     private fun generateSignature(payload: String, secret: String): String {
         val secretKeySpec = SecretKeySpec(secret.toByteArray(), "HmacSHA256")
         val mac = Mac.getInstance("HmacSHA256")

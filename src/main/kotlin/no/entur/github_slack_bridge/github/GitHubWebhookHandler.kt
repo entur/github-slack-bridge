@@ -206,7 +206,7 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                     if (buildAge > Duration.ofDays(28)) {
                         logger.info("Ignoring failure for old build (${buildAge.toDays()} days old): ${workflowRun.name} #${workflowRun.runNumber}")
                     } else {
-                        val again = if (recentlyFailedBuilds.contains(workflowKey)) " again" else ""
+                        val again = if (recentlyFailedBuilds.containsKey(workflowKey)) " again" else ""
                         recentlyFailedBuilds[workflowKey] = FailedBuildInfo(
                             workflowName = workflowName,
                             htmlUrl = workflowRun.htmlUrl,
