@@ -619,7 +619,8 @@ class GitHubWebhookHandlerTest {
             workflowId = 333333,
             id = 987654323,
             runNumber = 44,
-            headBranch = "prod"
+            headBranch = "prod",
+            defaultBranch = "prod"
         )
 
         val mockSlackClient = MockSlackClient()
@@ -673,6 +674,60 @@ class GitHubWebhookHandlerTest {
         assertEquals(0, mockSlackClient.sentMessages.size)
     }
 
+    @Test
+    fun `test push event on non-standard default branch is processed`() = runBlocking {
+        val payload = createPushPayload(branch = "rutebanken", defaultBranch = "rutebanken")
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("push", payload, "sha256=${generateSignature(payload, testSecret)}", "dev-team")
+
+        assertEquals(1, mockSlackClient.sentMessages.size)
+        assertTrue(mockSlackClient.sentMessages.first().text.contains("`rutebanken`"))
+    }
+
+    @Test
+    fun `test push event on main is ignored when default branch is something else`() = runBlocking {
+        val payload = createPushPayload(branch = "main", defaultBranch = "rutebanken")
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("push", payload, "sha256=${generateSignature(payload, testSecret)}", "dev-team")
+
+        assertEquals(0, mockSlackClient.sentMessages.size)
+    }
+
+    @Test
+    fun `test workflow run on non-standard default branch is processed`() = runBlocking {
+        val payload = createWorkflowRunPayload(
+            conclusion = "failure",
+            headBranch = "rutebanken",
+            defaultBranch = "rutebanken"
+        )
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", payload, "sha256=${generateSignature(payload, testSecret)}", "builds")
+
+        assertEquals(1, mockSlackClient.sentMessages.size)
+        assertTrue(mockSlackClient.sentMessages.first().text.contains("`rutebanken`"))
+    }
+
+    @Test
+    fun `test workflow run on main is ignored when default branch is something else`() = runBlocking {
+        val payload = createWorkflowRunPayload(
+            conclusion = "failure",
+            headBranch = "main",
+            defaultBranch = "rutebanken"
+        )
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", payload, "sha256=${generateSignature(payload, testSecret)}", "builds")
+
+        assertEquals(0, mockSlackClient.sentMessages.size)
+    }
+
     private fun generateSignature(payload: String, secret: String): String {
         val secretKeySpec = SecretKeySpec(secret.toByteArray(), "HmacSHA256")
         val mac = Mac.getInstance("HmacSHA256")
@@ -691,7 +746,8 @@ class GitHubWebhookHandlerTest {
         headSha: String = "abcdef1234567890abcdef1234567890abcdef12",
         createdAt: Instant = Instant.now(),
         workflowId: Long = 123456,
-        headBranch: String = "main"
+        headBranch: String = "main",
+        defaultBranch: String? = null
     ): String {
         val updatedAt = createdAt.plus(15, ChronoUnit.MINUTES)
         return """
@@ -722,6 +778,7 @@ class GitHubWebhookHandlerTest {
             "full_name": "user/test-repo",
             "html_url": "https://github.com/user/test-repo",
             "url": "https://api.github.com/repos/user/test-repo",
+            ${defaultBranch?.let { "\"default_branch\": \"$it\"," } ?: ""}
             "owner": {
               "login": "user",
               "id": 12345,
@@ -736,6 +793,42 @@ class GitHubWebhookHandlerTest {
         }
         """.trimIndent()
     }
+
+    private fun createPushPayload(branch: String, defaultBranch: String? = null): String = """
+        {
+          "ref": "refs/heads/$branch",
+          "repository": {
+            "id": 123456789,
+            "name": "test-repo",
+            "full_name": "user/test-repo",
+            "html_url": "https://github.com/user/test-repo",
+            "url": "https://api.github.com/repos/user/test-repo",
+            ${defaultBranch?.let { "\"default_branch\": \"$it\"," } ?: ""}
+            "owner": {
+              "login": "user",
+              "id": 12345
+            }
+          },
+          "commits": [
+            {
+              "id": "1234567890abcdef1234567890abcdef12345678",
+              "message": "Fix bug in authentication",
+              "timestamp": "2025-06-05T12:00:00Z",
+              "url": "https://github.com/user/test-repo/commit/1234567890abcdef1234567890abcdef12345678",
+              "author": {
+                "name": "Test User",
+                "email": "test@example.com",
+                "username": "testuser"
+              }
+            }
+          ],
+          "sender": {
+            "login": "testuser",
+            "id": 12345
+          },
+          "compare": "https://github.com/user/test-repo/compare/oldsha...newsha"
+        }
+        """.trimIndent()
 
 
     private class MockSlackClient : SlackClient("https://dummy-url") {

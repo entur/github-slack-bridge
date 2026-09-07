@@ -80,8 +80,8 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             val branchName = pushEvent.ref.removePrefix("refs/heads/")
             val repoName = pushEvent.repository.fullName
 
-            if (!supported_branches.contains(branchName)) {
-                logger.info("Skipping push event for branch: $branchName (not $supported_branches")
+            if (!isNotifiedBranch(branchName, pushEvent.repository)) {
+                logger.info("Skipping push event for branch: $branchName (not in ${notifiedBranches(pushEvent.repository)})")
                 return
             }
 
@@ -186,8 +186,8 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
             val branchName = workflowRun.headBranch
 
-            if (!supported_branches.contains(branchName)) {
-                logger.info("Skipping workflow run event for branch: $branchName (not in $supported_branches)")
+            if (!isNotifiedBranch(branchName, repository)) {
+                logger.info("Skipping workflow run event for branch: $branchName (not in ${notifiedBranches(repository)})")
                 return
             }
 
@@ -312,7 +312,14 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
     }
 
     companion object {
-        val supported_branches = listOf("master", "main", "prod")
+        // Used when the payload has no default_branch
+        val fallbackDefaultBranches = listOf("master", "main")
+
+        fun notifiedBranches(repository: GitHubPushEvent.Repository): List<String> =
+            repository.defaultBranch?.let { listOf(it) } ?: fallbackDefaultBranches
+
+        fun isNotifiedBranch(branchName: String, repository: GitHubPushEvent.Repository): Boolean =
+            branchName in notifiedBranches(repository)
     }
 }
 

@@ -54,9 +54,9 @@ echo -n 'some new secret' | gcloud secrets versions add GITHUB_WEBHOOK_SECRET --
 
 ### Supported GitHub Events
 
-- Push events (to main/master/prod branches)
+- Push events (to the repository's default branch)
 - Pull request events (opened, merged)
-- Workflow run events (failed builds and fixed builds)
+- Workflow run events (failed builds and fixed builds, default branch only)
 
 ### Requirements
 

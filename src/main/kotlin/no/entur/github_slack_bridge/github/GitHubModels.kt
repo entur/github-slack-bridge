@@ -33,6 +33,7 @@ data class GitHubPushEvent(
         val description: String? = null,
         val url: String = "",
         @SerialName("html_url") val htmlUrl: String,
+        @SerialName("default_branch") val defaultBranch: String? = null,
         val owner: Owner = Owner(login = "", id = 0)
     )
 
