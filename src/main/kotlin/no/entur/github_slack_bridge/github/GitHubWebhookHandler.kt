@@ -80,8 +80,11 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             val branchName = pushEvent.ref.removePrefix("refs/heads/")
             val repoName = pushEvent.repository.fullName
 
-            if (!isNotifiedBranch(branchName, pushEvent.repository)) {
-                logger.info("Skipping push event for branch: $branchName (not in ${notifiedBranches(pushEvent.repository)})")
+            if (!isDefaultBranch(branchName, pushEvent.repository)) {
+                logger.info(
+                    "Skipping push event for $repoName: branch $branchName is not the default branch " +
+                            "(${pushEvent.repository.defaultBranch ?: "absent from payload"})"
+                )
                 return
             }
 
@@ -108,6 +111,15 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             logger.error("Error processing push event", e)
             throw e
         }
+    }
+
+    private fun isDefaultBranch(branchName: String, repository: GitHubPushEvent.Repository): Boolean {
+        val defaultBranch = repository.defaultBranch
+        if (defaultBranch == null) {
+            logger.warn("No default_branch in payload for ${repository.fullName}, falling back to main/master")
+            return branchName == "main" || branchName == "master"
+        }
+        return branchName == defaultBranch
     }
 
     private fun formatCommitMessages(commits: List<GitHubCommit>): String {
@@ -186,8 +198,11 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
 
             val branchName = workflowRun.headBranch
 
-            if (!isNotifiedBranch(branchName, repository)) {
-                logger.info("Skipping workflow run event for branch: $branchName (not in ${notifiedBranches(repository)})")
+            if (!isDefaultBranch(branchName, repository)) {
+                logger.info(
+                    "Skipping workflow run event for ${repository.fullName}: branch $branchName is not the default " +
+                            "branch (${repository.defaultBranch ?: "absent from payload"})"
+                )
                 return
             }
 
@@ -309,17 +324,6 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
             hours > 0 -> "${hours}h ${minutes}m"
             else -> "${minutes}m"
         }
-    }
-
-    companion object {
-        // Used when the payload has no default_branch
-        val fallbackDefaultBranches = listOf("master", "main")
-
-        fun notifiedBranches(repository: GitHubPushEvent.Repository): List<String> =
-            repository.defaultBranch?.let { listOf(it) } ?: fallbackDefaultBranches
-
-        fun isNotifiedBranch(branchName: String, repository: GitHubPushEvent.Repository): Boolean =
-            branchName in notifiedBranches(repository)
     }
 }
 

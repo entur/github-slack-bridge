@@ -23,7 +23,7 @@ After setting up the webhook, GitHub will send a ping event to verify the connec
 
 ### Batch setup
 
-If you want to add the webhook to multiple repositories, you can use the `gh_webook_tool.sh` script to automate the process.
+If you want to add the webhook to multiple repositories, you can use the `batch_add_webhook.sh` script to automate the process.
 For EnTur, the secret is available in 1Password. By default it *does not* make any changes. Add `--no-dry-run` to actually make changes:
 
 ```bash
@@ -57,6 +57,8 @@ echo -n 'some new secret' | gcloud secrets versions add GITHUB_WEBHOOK_SECRET --
 - Push events (to the repository's default branch)
 - Pull request events (opened, merged)
 - Workflow run events (failed builds and fixed builds, default branch only)
+
+Failed builds are tracked in memory, so a redeploy drops any pending "build fixed" notifications.
 
 ### Requirements
 
