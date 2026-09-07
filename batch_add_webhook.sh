@@ -114,6 +114,10 @@ require_variable "${CHANNEL:-}" "--channel is required"
 
 FULL_WEBHOOK_URL="$WEBHOOK_URL/$CHANNEL"
 
+if [[ "$DRY_RUN" == "true" ]]; then
+  echo "DRY RUN: no changes will be made, add --no-dry-run to apply ℹ️"
+fi
+
 team_repos() {
   local team=$1
 
