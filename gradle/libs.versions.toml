@@ -1,11 +1,10 @@
 [versions]
-ben-manes-versions = "0.54.0"
 coroutines = "1.11.0"
-kotlin = "2.4.0"
+kotlin = "2.4.10"
 kotlinxSerialization = "1.11.0"
-ktor = "3.5.0"
-logback = "1.5.34"
-shadow = "9.4.2"
+ktor = "3.5.2"
+logback = "1.6.3"
+shadow = "9.6.1"
 
 [libraries]
 ktor-server-core = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
@@ -24,4 +23,3 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 
 [plugins]
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
-versions = { id = "com.github.ben-manes.versions", version.ref = "ben-manes-versions" }

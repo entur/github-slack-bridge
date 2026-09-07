@@ -1,9 +1,8 @@
 plugins {
-    kotlin("jvm") version "2.4.0"
+    kotlin("jvm") version "2.4.10"
     application
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.0"
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.10"
     alias(libs.plugins.shadow)
-    alias(libs.plugins.versions)
 }
 
 repositories {
@@ -60,6 +59,10 @@ fun isNonStable(version: String): Boolean {
 }
 
 tasks.dependencyUpdates {
+    // The plugin's task holds a Project reference, so it cannot be stored in the
+    // configuration cache. This disables the cache for this invocation only.
+    notCompatibleWithConfigurationCache("gradle-versions-plugin is not configuration cache compatible")
+
     doFirst {
         // https://github.com/ben-manes/gradle-versions-plugin/issues/968
         gradle.startParameter.isParallelProjectExecutionEnabled = false
