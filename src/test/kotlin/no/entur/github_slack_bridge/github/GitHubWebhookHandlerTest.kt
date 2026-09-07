@@ -567,6 +567,62 @@ class GitHubWebhookHandlerTest {
     }
 
     @Test
+    fun `test workflow run from a fork is ignored even on the default branch`() = runBlocking {
+        // Fork owners routinely open PRs from a branch named like our default branch
+        val payload = createWorkflowRunPayload(
+            conclusion = "failure",
+            headBranch = "main",
+            defaultBranch = "main",
+            headRepository = "contributor/test-repo"
+        )
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", payload, "sha256=${generateSignature(payload, testSecret)}", "builds")
+
+        assertEquals(0, mockSlackClient.sentMessages.size)
+        assertEquals(0, webhookHandler.getBuildStatus().stats.totalFailedBuilds)
+    }
+
+    @Test
+    fun `test workflow run from the repository itself is processed`() = runBlocking {
+        val payload = createWorkflowRunPayload(
+            conclusion = "failure",
+            headBranch = "main",
+            defaultBranch = "main",
+            headRepository = "user/test-repo"
+        )
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", payload, "sha256=${generateSignature(payload, testSecret)}", "builds")
+
+        assertEquals(1, mockSlackClient.sentMessages.size)
+    }
+
+    @Test
+    fun `test fork failure does not clear a real failure on the default branch`() = runBlocking {
+        val ourFailure = createWorkflowRunPayload(conclusion = "failure", headRepository = "user/test-repo")
+        val forkSuccess = createWorkflowRunPayload(
+            conclusion = "success",
+            id = 987654350,
+            runNumber = 50,
+            headRepository = "contributor/test-repo"
+        )
+
+        val mockSlackClient = MockSlackClient()
+        val webhookHandler = GitHubWebhookHandler(mockSlackClient, testSecret)
+
+        webhookHandler.handleWebhook("workflow_run", ourFailure, "sha256=${generateSignature(ourFailure, testSecret)}", "builds")
+        webhookHandler.handleWebhook("workflow_run", forkSuccess, "sha256=${generateSignature(forkSuccess, testSecret)}", "builds")
+
+        // The fork's green run must not post "build fixed" nor drop our tracked failure
+        assertEquals(1, mockSlackClient.sentMessages.size)
+        assertTrue(mockSlackClient.sentMessages.first().text.contains(":x: build failed:"))
+        assertEquals(1, webhookHandler.getBuildStatus().stats.totalFailedBuilds)
+    }
+
+    @Test
     fun `test repeated failure of the same workflow reports failed again`() = runBlocking {
         val firstFailure = createWorkflowRunPayload(conclusion = "failure")
         val secondFailure = createWorkflowRunPayload(conclusion = "failure", id = 987654399, runNumber = 43)
@@ -743,7 +799,8 @@ class GitHubWebhookHandlerTest {
         createdAt: Instant = Instant.now(),
         workflowId: Long = 123456,
         headBranch: String = "main",
-        defaultBranch: String? = "main"
+        defaultBranch: String? = "main",
+        headRepository: String? = null
     ): String {
         val updatedAt = createdAt.plus(15, ChronoUnit.MINUTES)
         return """
@@ -767,6 +824,7 @@ class GitHubWebhookHandlerTest {
               "avatar_url": "https://avatars.githubusercontent.com/u/12345?v=4"
             },
             "run_number": $runNumber
+            ${headRepository?.let { ""","head_repository": { "full_name": "$it" }""" } ?: ""}
           },
           "repository": {
             "id": 123456789,

@@ -206,6 +206,17 @@ open class GitHubWebhookHandler(private val slackClient: SlackClient, protected 
                 return
             }
 
+            // A fork's PR branch can share a name with our default branch, and its
+            // failures would otherwise be reported as ours and share the workflow key
+            val headRepository = workflowRun.headRepository
+            if (headRepository != null && headRepository.fullName != repository.fullName) {
+                logger.info(
+                    "Skipping workflow run event for ${repository.fullName}: branch $branchName belongs to " +
+                            "fork ${headRepository.fullName}"
+                )
+                return
+            }
+
             val workflowKey = "${workflowRun.workflowId}:${branchName}"
 
             if (workflowRun.status == "completed") {

@@ -56,7 +56,7 @@ echo -n 'some new secret' | gcloud secrets versions add GITHUB_WEBHOOK_SECRET --
 
 - Push events (to the repository's default branch)
 - Pull request events (opened, merged)
-- Workflow run events (failed builds and fixed builds, default branch only)
+- Workflow run events (failed builds and fixed builds, default branch only, forks ignored)
 
 Failed builds are tracked in memory, so a redeploy drops any pending "build fixed" notifications.
 

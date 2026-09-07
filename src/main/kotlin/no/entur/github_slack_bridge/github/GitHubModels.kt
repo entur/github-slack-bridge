@@ -134,7 +134,14 @@ data class GitHubWorkflowRunEvent(
         @SerialName("head_sha") val headSha: String,
         @SerialName("check_suite_id") val checkSuiteId: Long,
         @SerialName("actor") val actor: Actor,
-        @SerialName("run_number") val runNumber: Int
+        @SerialName("run_number") val runNumber: Int,
+        // Absent on older payloads; differs from repository for runs triggered by a fork
+        @SerialName("head_repository") val headRepository: HeadRepository? = null
+    )
+
+    @Serializable
+    data class HeadRepository(
+        @SerialName("full_name") val fullName: String
     )
 
     @Serializable
