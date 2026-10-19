@@ -1,4 +1,0 @@
-common:
-  env: dev
-  ingress:
-    host: github-slack-bridge.dev.entur.org

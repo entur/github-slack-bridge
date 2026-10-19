@@ -47,11 +47,6 @@ This service requires the following environment variables (for EnTur, these are 
   - Example: `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX`
 - `GITHUB_WEBHOOK_SECRET` - **Required**. The secret used to validate GitHub webhook payloads.
 
-Update secret (Entur):
-```
-echo -n 'some new secret' | gcloud secrets versions add GITHUB_WEBHOOK_SECRET --data-file=- --project=ent-gthbslckbr-dev
-```
-
 ### Supported GitHub Events
 
 - Push events (to the repository's default branch)
@@ -101,6 +96,12 @@ java -jar build/libs/github-slack-bridge-all.jar
 ```bash
 ./gradlew build
 ```
+
+## Deployment
+
+A push to `main` dispatches a deploy in the internal repo
+[github-slack-bridge-deployment-config](https://github.com/entur/github-slack-bridge-deployment-config), which
+holds the helm chart and the deploy workflow.
 
 ## License
 
