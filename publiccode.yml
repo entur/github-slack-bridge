@@ -1,0 +1,57 @@
+# publiccode.yml metadata, see https://yml.publiccode.tools/
+publiccodeYmlVersion: "0.7.0"
+
+name: GitHub Slack Bridge
+url: https://github.com/entur/github-slack-bridge
+
+platforms:
+  - web
+  - linux
+
+categories:
+  - it-development
+  - communications
+
+developmentStatus: stable
+softwareType: standalone/backend
+
+organisation:
+  name: Entur AS
+  uri: https://entur.no
+
+usedBy:
+  - Entur AS
+
+intendedAudience:
+  scope:
+    - transportation
+
+description:
+  en:
+    localisedName: GitHub Slack Bridge
+    shortDescription: Forwards GitHub webhook events to Slack channels.
+    longDescription: >
+      GitHub Slack Bridge receives GitHub webhooks and posts pushes to the default branch, opened and merged pull
+      requests, and failed and fixed workflow runs to a Slack channel named in the webhook URL. A script adds the
+      webhook to every repository with a given team or topic.
+    documentation: https://github.com/entur/github-slack-bridge/blob/main/README.md
+    features:
+      - Push, pull request and workflow run notifications
+      - Slack channel chosen per webhook URL
+      - Webhook signature validation
+      - Batch webhook setup by team or topic
+
+legal:
+  license: EUPL-1.2
+  mainCopyrightOwner: Entur AS
+
+maintenance:
+  type: internal
+  contacts:
+    - name: Entur ROR (Open Data and Journey Planning)
+      email: kollektivdata@entur.org
+
+localisation:
+  localisationReady: false
+  availableLanguages:
+    - en
