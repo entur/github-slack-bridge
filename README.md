@@ -1,74 +1,62 @@
 # GitHub Slack Bridge
 
-This service forwards GitHub webhook events to Slack channels.
+Forwards GitHub webhook events to Slack channels.
 
-### Single-repository setup
+For Entur, the service runs at `https://github-slack-bridge.dev.entur.org`, and the webhook secret is in 1Password.
 
-1. Go to your GitHub repository and click on **Settings**.
-2. Select **Webhooks** from the left sidebar.
-3. Click the **Add webhook** button.
-4. In the **Payload URL** field, enter: `https://your-deployment-url/webhook/your-slack-channel`
-    - Replace `your-deployment-url` with the base URL where this service is deployed (for EnTur, this is `github-slack-bridge.dev.entur.org`).
-    - Replace `your-slack-channel` with the name of the Slack channel you want to send notifications to.
-5. Set the **Content type** to `application/json`.
-6. In the **Secret** field, enter your webhook secret. **This field is mandatory** and must match the `GITHUB_WEBHOOK_SECRET` environment variable set in the service
-   (for EnTur, this is available in 1Password).
-7. Under **Which events would you like to trigger this webhook?**:
-    - Select **Let me select individual events**.
-    - Check the following events: `Push`, `Pull requests`, and `Workflow runs`.
-8. Make sure **Active** is checked.
-9. Click **Add webhook** to save your configuration.
+## Supported events
 
-After setting up the webhook, GitHub will send a ping event to verify the connection. You should see this event in your service logs.
+- **Push** to the default branch
+- **Pull request** opened or merged
+- **Workflow run** failed or fixed, on the default branch (forks are ignored)
 
-### Batch setup
+Failed builds are tracked in memory, so a redeploy drops pending "build fixed" notifications.
 
-If you want to add the webhook to multiple repositories, you can use the `batch_add_webhook.sh` script to automate the process.
-For EnTur, the secret is available in 1Password. By default it *does not* make any changes. Add `--no-dry-run` to actually make changes:
+## Adding a webhook
+
+### With the script
+
+`batch_add_webhook.sh` adds the webhook to a single repository, or to every repository with a topic or administered by a team:
 
 ```bash
+./batch_add_webhook.sh --secret 'webhook secret' --channel 'your-slack-channel' repo some-repo
 ./batch_add_webhook.sh --secret 'webhook secret' --channel 'your-slack-channel' topic some-topic # For RoR we use 'ror'
-./batch_add_webhook.sh --secret 'webhook secret' --channel 'your-slack-channel' team some-team # For RoR we use 'team-ruter-reiseplanlegger'
+./batch_add_webhook.sh --secret 'webhook secret' --channel 'your-slack-channel' team some-team   # For RoR we use 'team-ruter-reiseplanlegger'
 ```
+
+It runs as a dry run by default. Add `--no-dry-run` to make changes. See `--help` for all options.
+
+### Manually
+
+In the repository, go to **Settings > Webhooks > Add webhook** and set:
+
+| Field        | Value                                                     |
+|--------------|-----------------------------------------------------------|
+| Payload URL  | `https://<service-url>/webhook/<slack-channel>`           |
+| Content type | `application/json`                                        |
+| Secret       | Must match `GITHUB_WEBHOOK_SECRET` in the service         |
+| Events       | **Let me select individual events**: `Push`, `Pull requests`, `Workflow runs` |
+| Active       | Checked                                                   |
+
+GitHub sends a ping event to verify the connection, which shows up in the service logs.
 
 ## Development
 
-### Server API Endpoint
+Requires Java 21 or higher.
 
-**POST** `/webhook/{channel}`
+The service exposes one endpoint, `POST /webhook/{channel}`, and needs two environment variables:
 
-Configure your GitHub repository webhooks to send events to this endpoint. The `{channel}` parameter in the URL specifies which Slack channel should receive the notifications.
-
-### Service Configuration
-
-This service requires the following environment variables (for EnTur, these are available in 1Password):
-
-- `SLACK_WEBHOOK_URL` - **Required**. The Slack incoming webhook URL that messages will be sent to.
-  - Example: `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX`
-- `GITHUB_WEBHOOK_SECRET` - **Required**. The secret used to validate GitHub webhook payloads.
-
-### Supported GitHub Events
-
-- Push events (to the repository's default branch)
-- Pull request events (opened, merged)
-- Workflow run events (failed builds and fixed builds, default branch only, forks ignored)
-
-Failed builds are tracked in memory, so a redeploy drops any pending "build fixed" notifications.
-
-### Requirements
-
-- Java 21 or higher
-- Kotlin 2.2.0
-
-### Running the Application
-
-#### Using Gradle
+- `SLACK_WEBHOOK_URL`: the Slack incoming webhook URL, e.g. `https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXX`
+- `GITHUB_WEBHOOK_SECRET`: the secret used to validate GitHub webhook payloads
 
 ```bash
-./gradlew run
+./gradlew run        # run locally
+./gradlew test       # run tests
+./gradlew build      # build
+./gradlew shadowJar  # build build/libs/github-slack-bridge-all.jar
 ```
 
-#### Using Docker
+With Docker (build the JAR first):
 
 ```bash
 docker build -t github-slack-bridge .
@@ -76,25 +64,6 @@ docker run -p 8080:8080 \
   -e SLACK_WEBHOOK_URL=your_slack_webhook_url \
   -e GITHUB_WEBHOOK_SECRET=your_github_secret \
   github-slack-bridge
-```
-
-#### Using the JAR
-
-```bash
-./gradlew shadowJar
-java -jar build/libs/github-slack-bridge-all.jar
-```
-
-### Running Tests
-
-```bash
-./gradlew test
-```
-
-### Building
-
-```bash
-./gradlew build
 ```
 
 ## Deployment
@@ -105,5 +74,4 @@ holds the helm chart and the deploy workflow.
 
 ## License
 
-This project is maintained by EnTur, using European Union Public License 1.2
-
+Maintained by Entur, licensed under the European Union Public License 1.2.

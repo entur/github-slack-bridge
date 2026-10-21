@@ -15,6 +15,7 @@ Usage: $0 [OPTIONS] COMMAND [ARG]
 Commands:
   team TEAM_NAME      Add webhooks to all repositories administered by TEAM_NAME
   topic TOPIC_NAME    Add webhooks to all repositories with TOPIC_NAME
+  repo REPO_NAME      Add webhook to a single repository
 
 Options:
   --org ORG             GitHub organization (default: $ORG)
@@ -29,6 +30,7 @@ Examples:
   $0 --secret "my secret" --channel "the-slack-channel" team team-ruter-reiseplanlegger
   $0 --no-dry-run --secret "my secret" --channel "the-slack-channel" topic ror
   $0 --update-secret --secret "new secret" --channel "the-slack-channel" topic ror
+  $0 --secret "my secret" --channel "the-slack-channel" repo github-slack-bridge
 EOF
 }
 
@@ -98,6 +100,12 @@ while [[ $# -gt 0 ]]; do
       require_argument "$1" $#
       COMMAND="topic"
       TOPIC_NAME="$2"
+      shift 2
+      ;;
+    repo)
+      require_argument "$1" $#
+      COMMAND="repo"
+      REPO_NAME="$2"
       shift 2
       ;;
     *)
@@ -279,5 +287,8 @@ case $COMMAND in
     ;;
   topic)
     add_webhook_by_topic "$TOPIC_NAME"
+    ;;
+  repo)
+    process_repo "$REPO_NAME"
     ;;
 esac
