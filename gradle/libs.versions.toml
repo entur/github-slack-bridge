@@ -3,7 +3,7 @@ coroutines = "1.11.0"
 kotlin = "2.4.21"
 kotlinxSerialization = "1.11.0"
 ktor = "3.6.0"
-logback = "1.6.3"
+logback = "1.6.5"
 shadow = "9.6.1"
 
 [libraries]
