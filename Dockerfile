@@ -1,4 +1,4 @@
-FROM bellsoft/liberica-runtime-container:jre-25-slim-musl@sha256:38c7dde7cda9b46bf512688e63a6c6ecf9f38ba05338c1df18994ad3f927c819
+FROM bellsoft/liberica-runtime-container:jre-27-slim-musl@sha256:12b1c2c044fe633ad7c6f1cc8ecfdaf5a5d70bc1248d484c460dad8e0a21c63b
 
 WORKDIR /srv
 COPY build/libs/github-slack-bridge-all.jar app.jar
