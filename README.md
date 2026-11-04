@@ -68,7 +68,7 @@ docker run -p 8080:8080 \
 
 ## Deployment
 
-A push to `main` dispatches a deploy in the internal repo
+A push to `main` builds the image and hands it over to a deploy in the internal repo
 [github-slack-bridge-deployment-config](https://github.com/entur/github-slack-bridge-deployment-config), which
 holds the helm chart and the deploy workflow.
 
