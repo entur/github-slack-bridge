@@ -10,4 +10,5 @@ ENTRYPOINT ["java", \
   "-XX:MaxRAMPercentage=65.0", \
   "-XX:+UseG1GC", \
   "-XX:+ExitOnOutOfMemoryError", \
+  "-XX:-UseBASE64Intrinsics", \
   "-jar", "app.jar"]
