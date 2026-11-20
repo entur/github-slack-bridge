@@ -1,4 +1,4 @@
-FROM gcr.io/distroless/java25-debian13:nonroot@sha256:1c4ced761d17961c900cba60c33c8c3c46edbdadaa9d5ef9806eb5a6824fd406
+FROM gcr.io/distroless/java25-debian13:nonroot@sha256:573ef04c0f84aaf4b34e0cb6eeef91c25a83290334586c4c44ef41ecae13a25e
 
 WORKDIR /srv
 COPY build/libs/github-slack-bridge-all.jar app.jar
@@ -10,5 +10,4 @@ ENTRYPOINT ["java", \
   "-XX:MaxRAMPercentage=65.0", \
   "-XX:+UseG1GC", \
   "-XX:+ExitOnOutOfMemoryError", \
-  "-XX:-UseBASE64Intrinsics", \
   "-jar", "app.jar"]
